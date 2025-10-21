@@ -116,7 +116,9 @@
          umassdti (:,:,:)     ! mass of U-cell/dte (kg/m^2 s)
 
       real(kind=dbl_kind), allocatable, public :: &
-         shearU(:,:,:) ! shear array on U points
+         uvelE(:,:,:), vvelE(:,:,:), &   ! E-face velocities (C grid)
+         uvelN(:,:,:), vvelN(:,:,:), &   ! N-face velocities (C grid)
+         shearU(:,:,:)                   ! shear at U (NE corner)
 
       public :: evp, init_evp
 
@@ -221,6 +223,17 @@
                    ratiodyEr(nx_block,ny_block,max_blocks), &
                    stat=ierr)
          if (ierr/=0) call abort_ice(subname//' ERROR: Out of memory ratio')
+
+         if (.not. allocated(uvelE)) then
+            allocate(uvelE(nx_block,ny_block,nblocks), vvelE(nx_block,ny_block,nblocks), &
+                     uvelN(nx_block,ny_block,nblocks), vvelN(nx_block,ny_block,nblocks), &
+                     shearU(nx_block,ny_block,nblocks), &
+                     stat=ierr)
+            if (ierr/=0) call abort_ice(subname//' ERROR: Out of memory ratio')
+            uvelE = c0; vvelE = c0
+            uvelN = c0; vvelN = c0
+            shearU = c0
+         end if
 
          !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block)
          do iblk = 1, nblocks

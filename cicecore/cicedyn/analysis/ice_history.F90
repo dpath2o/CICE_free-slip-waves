@@ -67,7 +67,8 @@
       use ice_calendar, only: yday, days_per_year, histfreq, &
           histfreq_n, nstreams
       use ice_domain_size, only: max_blocks, max_nstrm, nilyr, nslyr, nblyr, ncat, nfsd
-      use ice_dyn_shared, only: kdyn, shearU
+      use ice_dyn_shared, only: kdyn
+      use ice_dyn_evp, only: uvelE, vvelE, uvelN, vvelN, shearU
       use ice_flux, only: mlt_onset, frz_onset, albcnt, snwcnt
       use ice_grid, only: grid_ice, grid_outfile, &
           grid_atm_thrm, grid_atm_dynu, grid_atm_dynv, &
@@ -709,6 +710,10 @@
     !   call broadcast_scalar (f_F2N, master_task)
     !   call broadcast_scalar (f_F2E, master_task)
       call broadcast_scalar (f_shearU, master_task)
+      call broadcast_scalar (f_uvelN, master_task)
+      call broadcast_scalar (f_vvelN, master_task)
+      call broadcast_scalar (f_uvelE, master_task)
+      call broadcast_scalar (f_vvelE, master_task)
 
       call broadcast_scalar (f_aicen, master_task)
       call broadcast_scalar (f_vicen, master_task)

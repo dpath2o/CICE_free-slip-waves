@@ -112,10 +112,10 @@
          dardg1dt, & ! rate of area loss by ridging ice (1/s)
          dardg2dt, & ! rate of area gain by new ridges (1/s)
          dvirdgdt, & ! rate of ice volume ridged (m/s)
-         opening , & ! rate of opening due to divergence/shear (1/s)
+         opening !, & ! rate of opening due to divergence/shear (1/s)
          ! dpath2o
          ! KuxN, KuyN, KuxE, KuyE, & ! coastal drag stress components on C-grid (N/m^2)
-         shearU
+         ! shearU
 
       real (kind=dbl_kind), dimension (:,:,:,:), allocatable, public :: &
        ! ridging diagnostics in categories
@@ -669,7 +669,7 @@
          ! KuE        (nx_block,ny_block,max_blocks), & ! coastal drag stress factor at E points (landfast ice)
          ! KuxE       (nx_block,ny_block,max_blocks), & ! coastal drag stress (x) at E points (N/m^2)
          ! KuyE       (nx_block,ny_block,max_blocks), & ! coastal drag stress (y) at E points (N/m^2)
-         shearU     (nx_block,ny_block,max_blocks), & !
+         ! shearU     (nx_block,ny_block,max_blocks), & !
          stat=ierr)
       if (ierr/=0) call abort_ice('(alloc_flux): Out of memory (C or CD grid)')
 
@@ -1216,7 +1216,7 @@
          ! KuyN       (:,:,:) = c0
          ! KuxE       (:,:,:) = c0
          ! KuyE       (:,:,:) = c0
-         shearU     (:,:,:) = c0
+         ! shearU     (:,:,:) = c0
       end if
       end subroutine init_history_dyn
 
