@@ -28,7 +28,6 @@
                 seabed_stress_factor_LKD, seabed_stress_factor_prob, &
                 deformations, deformationsC_T, deformationsCD_T, &
                 strain_rates, strain_rates_T, strain_rates_U, strain_rates_U_free_slip, &
-                strain_rates_U_free_slip_noratio, &
                 visc_replpress, &
                 dyn_haloUpdate, &
                 stack_fields, unstack_fields
@@ -2290,11 +2289,14 @@
                                  ratiodyE,   ratiodyEr, &
                                  epm,        npm,       &
                                  divergU,    tensionU,  &
-                                 shearU,     DeltaU     )
+                                 shearU,     DeltaU,    &
+                                 ksub,       ndte       )
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block, & ! block dimensions
          icellU
+
+      integer (kind=int_kind), intent(in) :: ksub, ndte
 
       integer (kind=int_kind), dimension (nx_block*ny_block), intent(in) :: &
          indxUi   , & ! compressed index in i-direction
@@ -2389,137 +2391,23 @@
 
       enddo
 
-      end subroutine strain_rates_U
-
-!=======================================================================
-! Compute strain rates at the U point — FREE-SLIP (Neumann)
-! Free-slip = zero normal flow; zero normal derivative of tangential
-!
-! IMPORTANT:
-!  - no clamping ratios: use rp = -ratio (mimic reflection)
-!  - No changes to calling signature versus no-slip version
-!  - Prints shearU at coastal U points (last subcycle only)
-!=======================================================================
-   subroutine strain_rates_U_free_slip(nx_block, ny_block,  &
-                                       icellU,              &
-                                       indxUi,   indxUj,    &
-                                       uvelE,    vvelE,     &
-                                       uvelN,    vvelN,     &
-                                       uvelU,    vvelU,     &
-                                       dxE,      dyN,       &
-                                       dxU,      dyU,       &
-                                       ratiodxN, ratiodxNr, &
-                                       ratiodyE, ratiodyEr, &
-                                       epm,      npm,       &
-                                       divergU,  tensionU,  &
-                                       shearU,   DeltaU,    &
-                                       ksub,     ndte)
-
-      use ice_kinds_mod, only: int_kind, dbl_kind
-      implicit none
-
-      !----------------------------
-      ! Arguments (identical to no-slip)
-      !----------------------------
-      integer (kind=int_kind), intent(in) :: nx_block, ny_block, icellU
-      integer (kind=int_kind), intent(in) :: ksub, ndte
-      integer (kind=int_kind), dimension (nx_block*ny_block), intent(in) :: &
-         indxUi, indxUj
-
-      real (kind=dbl_kind), dimension (nx_block,ny_block), intent(in) :: &
-         uvelE, vvelE, uvelN, vvelN, uvelU, vvelU, &
-         dxE, dyN, dxU, dyU, &
-         ratiodxN, ratiodxNr, ratiodyE, ratiodyEr, &
-         epm, npm
-
-      real (kind=dbl_kind), dimension (nx_block,ny_block), intent(out) :: &
-         divergU, tensionU, shearU, DeltaU
-
-      !----------------------------
-      ! Locals
-      !----------------------------
-      integer (kind=int_kind) :: ij, i, j
-      real (kind=dbl_kind) :: uNip1j, uNij, vEijp1, vEij, uEijp1, uEij, vNip1j, vNij
-      real (kind=dbl_kind) :: rpdxN, rpdxNr, rpdyE, rpdyEr
-
-      ! module constants assumed available in host: c0, e_factor, nu_diag
-      ! if not, add USE for their modules.
-
-      divergU (:,:) = c0
-      tensionU(:,:) = c0
-      shearU  (:,:) = c0
-      DeltaU  (:,:) = c0
-
-      !----------------------------
-      ! Build strains at U (free-slip)
-      !----------------------------
-      do ij = 1, icellU
-         i = indxUi(ij)
-         j = indxUj(ij)
-
-         ! Even reflection for free-slip: rp = - ratio (NO clamping to >= 0)
-         rpdxN  = -ratiodxN (i,j)
-         rpdxNr = -ratiodxNr(i,j)
-         rpdyE  = -ratiodyE (i,j)
-         rpdyEr = -ratiodyEr(i,j)
-
-         ! ---- e11 + e22 terms (divergence / tension use these du/dx, dv/dy parts) ----
-         ! u on N faces across x-direction (handles coast via mask+ratio)
-         uNip1j = uvelN(i+1,j) * npm(i+1,j) + (npm(i,j)   - npm(i+1,j)) * npm(i,j)   * rpdxN  * uvelN(i  ,j)
-         uNij   = uvelN(i  ,j) * npm(i  ,j) + (npm(i+1,j) - npm(i  ,j)) * npm(i+1,j) * rpdxNr * uvelN(i+1,j)
-
-         ! v on E faces across y-direction
-         vEijp1 = vvelE(i,j+1) * epm(i,  j+1) + (epm(i,  j) - epm(i,  j+1)) * epm(i,  j) * rpdyE  * vvelE(i,  j)
-         vEij   = vvelE(i,  j) * epm(i,  j  ) + (epm(i,  j+1) - epm(i,  j )) * epm(i,  j+1) * rpdyEr * vvelE(i,  j+1)
-
-         ! divergence  = e11 + e22  (area-weighted form)
-         divergU(i,j) = dyU(i,j)   * (uNip1j - uNij)     &
-                     + uvelU(i,j) * (dyN(i+1,j) - dyN(i,j)) &
-                     + dxU(i,j)   * (vEijp1 - vEij)     &
-                     + vvelU(i,j) * (dxE(i,j+1) - dxE(i,j))
-
-         ! tension     = e11 - e22
-         tensionU(i,j) = dyU(i,j)   * (uNip1j - uNij)     &
-                     - uvelU(i,j) * (dyN(i+1,j) - dyN(i,j)) &
-                     - dxU(i,j)   * (vEijp1 - vEij)     &
-                     + vvelU(i,j) * (dxE(i,j+1) - dxE(i,j))
-
-         ! ---- 2*e12 terms (shear uses du/dy on E and dv/dx on N with same BC logic) ----
-         uEijp1 = uvelE(i,  j+1) * epm(i,  j+1) + (epm(i,  j) - epm(i,  j+1)) * epm(i,  j) * rpdyE  * uvelE(i,  j)
-         uEij   = uvelE(i,  j  ) * epm(i,  j  ) + (epm(i,  j+1) - epm(i,  j )) * epm(i,  j+1) * rpdyEr * uvelE(i,  j+1)
-
-         vNip1j = vvelN(i+1,j  ) * npm(i+1,j  ) + (npm(i,  j) - npm(i+1,j)) * npm(i,  j) * rpdxN  * vvelN(i,  j)
-         vNij   = vvelN(i,  j  ) * npm(i,  j  ) + (npm(i+1,j) - npm(i,  j )) * npm(i+1,j) * rpdxNr * vvelN(i+1,j)
-
-         shearU(i,j) =  dxU(i,j) * (uEijp1 - uEij)               &
-                     - uvelU(i,j) * (dxE(i,  j+1) - dxE(i,  j))  &
-                     + dyU(i,j) * (vNip1j - vNij)                &
-                     - vvelU(i,j) * (dyN(i+1,j  ) - dyN(i,  j))
-
-         ! denominator helper
-         DeltaU(i,j) = sqrt( divergU(i,j)**2 + e_factor * ( tensionU(i,j)**2 + shearU(i,j)**2 ) )
-
-      end do
-
-      !----------------------------
-      ! Debug print: shearU at coastal U points (last subcycle only)
-      ! A U point is “coastal” if any of its 4 surrounding faces is masked
-      ! (uses epm/npm only; no tmask required)
-      !----------------------------
+      ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
       if (ksub == ndte) then
          do j = 2, ny_block-1
             do i = 2, nx_block-1
-               if (epm(i,  j  ) == c0 .or. epm(i,  j-1) == c0 .or. &
-                  npm(i,  j  ) == c0 .or. npm(i-1,  j) == c0) then
-                  write(nu_diag,'(a,2i6,1x,es16.8)') 'free-slip shearU at coastal U (i,j,val)=', &
-                        i, j, shearU(i,j)
+               ! U(i,j) is “coastal” if any of its four surrounding faces is land
+               if ( epm(i  ,j  ) == c0 .or. epm(i  ,j-1) == c0 .or. &
+                    npm(i  ,j  ) == c0 .or. npm(i-1,j  ) == c0 ) then
+                  !$OMP CRITICAL (IO_DIAG)
+                  write(nu_diag,'(a,2i6,1p,e16.8)') 'no-slip U-coast shearU  (i,j)=', i, j, shearU(i,j)
+                  !$OMP END CRITICAL (IO_DIAG)
                end if
             end do
          end do
          call flush(nu_diag)
       end if
 
-   end subroutine strain_rates_U_free_slip
+      end subroutine strain_rates_U
 
 !=======================================================================
 ! Compute strain rates at the U point — FREE-SLIP (Neumann)
@@ -2536,7 +2424,7 @@
 !    component vanishes at the wall.
 !  - Signature kept identical to the no-slip routine.
 !=======================================================================
-      subroutine strain_rates_U_free_slip_noratio(nx_block, ny_block,  &
+      subroutine strain_rates_U_free_slip(nx_block, ny_block,  &
                                           icellU,              &
                                           indxUi,   indxUj,    &
                                           uvelE,    vvelE,     &
@@ -2582,38 +2470,25 @@
             i = indxUi(ij)
             j = indxUj(ij)
 
-            ! --- “dv/dx” part on E-grid uses (i,j+1) and (i,j) samples
-            ! If epm(i,j+1)==0 and epm(i,j)==1 -> substitute vE(i,j+1) := +vE(i,j)
+            ! dv/dx
             vEijp1 = vvelE(i,j+1)*epm(i,j+1) + (epm(i,j)   - epm(i,j+1)) * epm(i,j)   * vvelE(i,j)
-            vEij   = vvelE(i,j  )*epm(i,j  ) + (epm(i,j+1) - epm(i,j  ) ) * epm(i,j+1) * vvelE(i,j+1)
+            vEij   = vvelE(i,j  )*epm(i,j  ) + (epm(i,j+1) - epm(i,j  )) * epm(i,j+1) * vvelE(i,j+1)
 
-            ! --- “du/dx or du/dy” part on N-grid using (i+1,j) and (i,j)
-            ! If npm(i+1,j)==0 and npm(i,j)==1 -> substitute uN(i+1,j) := +uN(i,j)
+            ! du/dy
             uNip1j = uvelN(i+1,j)*npm(i+1,j) + (npm(i,j)   - npm(i+1,j)) * npm(i,j)   * uvelN(i  ,j)
-            uNij   = uvelN(i  ,j)*npm(i  ,j) + (npm(i+1,j) - npm(i  ,j) ) * npm(i+1,j) * uvelN(i+1,j)
+            uNij   = uvelN(i  ,j)*npm(i  ,j) + (npm(i+1,j) - npm(i  ,j)) * npm(i+1,j) * uvelN(i+1,j)
 
-            ! divergence  =  e_11 + e_22
-            divergU(i,j) = dyU(i,j)   * (uNip1j - uNij)   + uvelU(i,j) * (dyN(i+1,j) - dyN(i,j)) &
-                        +  dxU(i,j)   * (vEijp1 - vEij)   + vvelU(i,j) * (dxE(i  ,j+1) - dxE(i,j))
-
-            ! tension = e_11 - e_22
-            tensionU(i,j)= dyU(i,j)   * (uNip1j - uNij)   - uvelU(i,j) * (dyN(i+1,j) - dyN(i,j)) &
-                        -  dxU(i,j)   * (vEijp1 - vEij)   + vvelU(i,j) * (dxE(i  ,j+1) - dxE(i,j))
-
-            ! --- “du/dy or du/dx” on E-grid for u
+            ! du/dx
             uEijp1 = uvelE(i,j+1)*epm(i,j+1) + (epm(i,j)   - epm(i,j+1)) * epm(i,j)   * uvelE(i  ,j)
-            uEij   = uvelE(i,j  )*epm(i,j  ) + (epm(i,j+1) - epm(i,j  ) ) * epm(i,j+1) * uvelE(i  ,j+1)
+            uEij   = uvelE(i,j  )*epm(i,j  ) + (epm(i,j+1) - epm(i,j  )) * epm(i,j+1) * uvelE(i  ,j+1)
 
-            ! --- “dv/dy” on N-grid for v
+            ! dv/dy
             vNip1j = vvelN(i+1,j)*npm(i+1,j) + (npm(i,j)   - npm(i+1,j)) * npm(i,j)   * vvelN(i  ,j)
-            vNij   = vvelN(i  ,j)*npm(i  ,j) + (npm(i+1,j) - npm(i  ,j) ) * npm(i+1,j) * vvelN(i+1,j)
+            vNij   = vvelN(i  ,j)*npm(i  ,j) + (npm(i+1,j) - npm(i  ,j)) * npm(i+1,j) * vvelN(i+1,j)
 
             ! shear = 2 e_12
             shearU(i,j) =  dxU(i,j) * (uEijp1 - uEij) - uvelU(i,j) * (dxE(i  ,j+1) - dxE(i,j))  &
-                        + dyU(i,j) * (vNip1j - vNij) - vvelU(i,j) * (dyN(i+1,j) - dyN(i,j))
-
-            ! Delta for viscosities
-            DeltaU(i,j) = sqrt( divergU(i,j)**2 + e_factor * ( tensionU(i,j)**2 + shearU(i,j)**2 ) )
+                        +  dyU(i,j) * (vNip1j - vNij) - vvelU(i,j) * (dyN(i+1,j  ) - dyN(i,j))
          end do
 
          ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
@@ -2632,7 +2507,7 @@
             call flush(nu_diag)
          end if
 
-      end subroutine strain_rates_U_free_slip_noratio
+      end subroutine strain_rates_U_free_slip
 
 !=======================================================================
 ! Computes viscosities and replacement pressure for stress

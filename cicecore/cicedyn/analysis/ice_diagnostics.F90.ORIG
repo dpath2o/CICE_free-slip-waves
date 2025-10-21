@@ -126,17 +126,11 @@
           update_ocn_f, cpl_frazil, Tair, Qa, fsw, fcondtop, meltt, meltb, meltl, snoice, &
           dsnow, congel, sst, sss, Tf, fhocn, &
           swvdr, swvdf, swidr, swidf, &
-          alvdr_init, alvdf_init, alidr_init, alidf_init!, &
-          ! dpath2o
-          ! KuxE, KuyN
+          alvdr_init, alvdf_init, alidr_init, alidf_init
       use ice_flux_bgc, only: faero_atm, faero_ocn, fiso_atm, fiso_ocn
       use ice_global_reductions, only: global_sum, global_sum_prod, global_maxval
-      use ice_grid, only: lmask_n, lmask_s, tarean, tareas, grid_ice, grid_average_X2Y!, &
-      ! dpath2o
-      !                     F2E, F2N
+      use ice_grid, only: lmask_n, lmask_s, tarean, tareas, grid_ice, grid_average_X2Y
       use ice_state   ! everything
-      ! dpath2o
-      ! use ice_dyn_shared, only: coastal_drag!, coastal_form_factor_E, coastal_form_factor_N
 ! tcraig, this is likely to cause circular dependency because ice_prescribed_mod is high level routine
 #ifdef CESMCOUPLED
       use ice_prescribed_mod, only: prescribed_ice
@@ -221,14 +215,6 @@
                  ! return value is checked against maxval_spval before writing.
 
       character(len=*), parameter :: subname = '(runtime_diags)'
-
-      ! dpath2o: locals for CDP print
-      real(kind=dbl_kind), parameter :: tiny = 1.0d-12
-      integer :: nactE, nactN
-      real(kind=dbl_kind) :: f2e_min, f2e_max, f2n_min, f2n_max
-      real(kind=dbl_kind) :: kuxE_mean, kuxE_max, kuyN_mean, kuyN_max
-      real(kind=dbl_kind) :: clE_max,  clN_max
-
 
       call icepack_query_parameters(ktherm_out=ktherm, calc_Tsfc_out=calc_Tsfc)
       call icepack_query_tracer_flags(tr_brine_out=tr_brine, tr_aero_out=tr_aero, &
@@ -1095,48 +1081,6 @@
         write(nu_diag,900) 'max ice volume     (m) = ',hmaxn,  hmaxs
         write(nu_diag,900) 'max ice speed    (m/s) = ',umaxn,  umaxs
         write(nu_diag,900) 'max strength    (kN/m) = ',pmaxn,  pmaxs
-
-         !-----------------------------------------------------------------------
-         ! dpath2o: Coastal Drag Parametrization (CDP) quick diagnostics
-         !-----------------------------------------------------------------------
-         ! if (coastal_drag .and. (grid_ice == 'C' .or. grid_ice == 'CD')) then
-         !    ! Active CDP faces (F2>0)
-         !    nactE = count( F2E > 0.0_dbl_kind )!count( coastal_form_factor_E > 0.0_dbl_kind )
-         !    nactN = count( F2N > 0.0_dbl_kind )
-
-         !    ! Basic F2 stats (over all faces)
-         !    f2e_min = minval(F2E);  f2e_max = maxval(F2E)!minval(coastal_form_factor_E);  f2e_max = maxval(coastal_form_factor_E)
-         !    f2n_min = minval(F2N);  f2n_max = maxval(F2N)
-
-         !    ! Stress magnitudes on active faces
-         !    if (nactE > 0) then
-         !       kuxE_mean = sum( abs(KuxE), mask = (F2E > 0.0_dbl_kind) ) / real(nactE,kind(dbl_kind))
-         !       kuxE_max  = maxval( abs(KuxE), mask = (F2E > 0.0_dbl_kind) )
-         !       ! |Cl| ≈ |KuxE| / |uE|
-         !       clE_max   = maxval( abs(KuxE) / (abs(uvelE) + tiny), mask = (F2E > 0.0_dbl_kind) )
-         !    else
-         !       kuxE_mean = 0.0_dbl_kind; kuxE_max = 0.0_dbl_kind; clE_max = 0.0_dbl_kind
-         !    end if
-
-         !    if (nactN > 0) then
-         !       kuyN_mean = sum( abs(KuyN), mask = (F2N > 0.0_dbl_kind) ) &
-         !                   / real(nactN,kind(dbl_kind))
-         !       kuyN_max  = maxval( abs(KuyN), mask = (F2N > 0.0_dbl_kind) )
-         !       ! |Cl| ≈ |KuyN| / |vN|
-         !       clN_max   = maxval( abs(KuyN) / (abs(vvelN) + tiny), mask = (F2N > 0.0_dbl_kind) )
-         !    else
-         !       kuyN_mean = 0.0_dbl_kind; kuyN_max = 0.0_dbl_kind; clN_max = 0.0_dbl_kind
-         !    end if
-
-         !    if (my_task == master_task) then
-         !       write(nu_diag,'(a,i8,a,i8)') 'CDP faces active (E,N) = ', nactE, ', ', nactN
-         !       write(nu_diag,'(a,2f9.3,a,2f9.3)') 'CDP F2 range  (E,N) = [', f2e_min, f2e_max, ']  [', f2n_min, f2n_max, ']'
-         !       write(nu_diag,'(a,2es12.4,a,2es12.4)') 'CDP |KuxE|(mean,max)= ', kuxE_mean, kuxE_max,  &
-         !                                              '   |KuyN|(mean,max)= ', kuyN_mean, kuyN_max
-         !       write(nu_diag,'(a,2es12.4)')           'CDP |ClE|_max, |ClN|_max= ', clE_max, clN_max
-         !    end if
-         ! end if
-
 
         if (print_global) then  ! global diags for conservations checks
 

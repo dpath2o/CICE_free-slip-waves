@@ -1,0 +1,30 @@
+ 
+/local/spool/pbs/mom_priv/jobs/153043729.gadi-pbs.SC:
+module: Command not found.
+module: Command not found.
+module: Command not found.
+module: Command not found.
+ 
+CICE case directory is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip
+CICE rundir is /g/data/gv90/da1339/cice-dirs/runs/free-slip
+CICE log file is cice.runlog.251022-054629
+CICE run started : Wed Oct 22 05:46:29 AEDT 2025
+CICE run finished: Wed Oct 22 05:46:38 AEDT 2025
+ 
+CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-054629
+CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+ CICE COMPLETED SUCCESSFULLY 
+CICE run completed successfully
+
+======================================================================================
+                  Resource Usage on 2025-10-22 05:46:41:
+   Job Id:             153043729.gadi-pbs
+   Project:            gv90
+   Exit Status:        255
+   Service Units:      0.00
+   NCPUs Requested:    1                      NCPUs Used: 1               
+                                           CPU Time Used: 00:00:05        
+   Memory Requested:   4.0GB                 Memory Used: 137.9MB         
+   Walltime requested: 00:30:00            Walltime Used: 00:00:14        
+   JobFS requested:    100.0MB                JobFS used: 0B              
+======================================================================================
