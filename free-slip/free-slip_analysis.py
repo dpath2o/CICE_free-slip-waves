@@ -143,8 +143,8 @@ def analyze_snapshot(path, label):
     # normal derivatives of tangential (free-slip ~0)
     dvE = normal_derivative_on_E(ds, coastE, vE)
     duN = normal_derivative_on_N(ds, coastN, uN)
-    stat_dv_dn_E = robust_stats(dvE, np.isfinite(dvE), "∂v/∂n(E)")
-    stat_du_dn_N = robust_stats(duN, np.isfinite(duN), "∂u/∂n(N)")
+    stat_dv_dn_E = robust_stats(dvE, np.isfinite(dvE), "dv/dn(E)")
+    stat_du_dn_N = robust_stats(duN, np.isfinite(duN), "du/dn(N)")
 
     # shear at coastal U (diagnostic)
     if "shearU_1" in ds:
@@ -179,9 +179,11 @@ def analyze_snapshot(path, label):
 
 
 def main():
-    free_dir   = "/g/data/gv90/da1339/cice-dirs/runs/BCtest1_free/history/"
-    noslip_dir = "/g/data/gv90/da1339/cice-dirs/runs/BCtest1_noslip/history/"
+    free_dir   = "/g/data/gv90/da1339/cice-dirs/runs/RESULTS/free-slip/history/"
+    D_FS_noRat = "/g/data/gv90/da1339/cice-dirs/runs/RESULTS/free-slip-noratio/history/"
+    noslip_dir = "/g/data/gv90/da1339/cice-dirs/runs/RESULTS/no-slip/history/"
     analyze_snapshot(free_dir,   "FREE-SLIP")
+    analyze_snapshot(D_FS_norat, "FREE-SLIP-NORATIO")
     analyze_snapshot(noslip_dir, "NO-SLIP")
 
 if __name__ == "__main__":

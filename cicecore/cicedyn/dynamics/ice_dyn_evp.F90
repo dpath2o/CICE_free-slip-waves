@@ -291,7 +291,7 @@
           DminTarea, visc_method, deformations, deformationsC_T, deformationsCD_T, &
           strain_rates_U, dxhy, dyhx, cxp, cyp, cxm, cym, &
           iceTmask, iceUmask, iceEmask, iceNmask, &
-          dyn_haloUpdate, fld2, fld3, fld4, strain_rates_U_free_slip
+          dyn_haloUpdate, fld2, fld3, fld4, strain_rates_U_free_slip, strain_rates_U_free_slip_noratio
       use ice_dyn_evp1d, only: dyn_evp1d_run
 
       real (kind=dbl_kind), intent(in) :: &
@@ -940,7 +940,21 @@
             ! strain rates at U point
             ! NOTE these are actually strain rates * area  (m^2/s)
             !-----------------------------------------------------------------
-               call strain_rates_U_free_slip (nx_block          , ny_block           , &
+               ! call strain_rates_U_free_slip (nx_block          , ny_block           , &
+               !                      icellU      (iblk),                      &
+               !                      indxUi    (:,iblk), indxUj     (:,iblk), &
+               !                      uvelE   (:,:,iblk), vvelE    (:,:,iblk), &
+               !                      uvelN   (:,:,iblk), vvelN    (:,:,iblk), &
+               !                      uvel    (:,:,iblk), vvel     (:,:,iblk), &
+               !                      dxE     (:,:,iblk), dyN      (:,:,iblk), &
+               !                      dxU     (:,:,iblk), dyU      (:,:,iblk), &
+               !                      ratiodxN(:,:,iblk), ratiodxNr(:,:,iblk), &
+               !                      ratiodyE(:,:,iblk), ratiodyEr(:,:,iblk), &
+               !                      epm     (:,:,iblk), npm      (:,:,iblk), &
+               !                      divergU (:,:,iblk), tensionU (:,:,iblk), &
+               !                      shearU  (:,:,iblk), deltaU   (:,:,iblk), &
+               !                      ksub              , ndte                 )
+               call strain_rates_U_free_slip_noratio (nx_block          , ny_block           , &
                                     icellU      (iblk),                      &
                                     indxUi    (:,iblk), indxUj     (:,iblk), &
                                     uvelE   (:,:,iblk), vvelE    (:,:,iblk), &
@@ -952,7 +966,8 @@
                                     ratiodyE(:,:,iblk), ratiodyEr(:,:,iblk), &
                                     epm     (:,:,iblk), npm      (:,:,iblk), &
                                     divergU (:,:,iblk), tensionU (:,:,iblk), &
-                                    shearU  (:,:,iblk), deltaU   (:,:,iblk)  )
+                                    shearU  (:,:,iblk), deltaU   (:,:,iblk), &
+                                    ksub              , ndte                 )
                ! call strain_rates_U (nx_block          , ny_block           , &
                !                      icellU      (iblk),                      &
                !                      indxUi    (:,iblk), indxUj     (:,iblk), &
