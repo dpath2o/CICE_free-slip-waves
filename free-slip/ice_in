@@ -596,6 +596,7 @@
     f_strength     = 'm'
     f_divu         = 'd1'
     f_shear        = 'd1'
+    f_shearU       = 'd1'
     f_vort         = 'd1'
     f_sig1         = 'd1'
     f_sig2         = 'd1'

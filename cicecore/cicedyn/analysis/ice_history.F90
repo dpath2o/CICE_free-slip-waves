@@ -67,7 +67,7 @@
       use ice_calendar, only: yday, days_per_year, histfreq, &
           histfreq_n, nstreams
       use ice_domain_size, only: max_blocks, max_nstrm, nilyr, nslyr, nblyr, ncat, nfsd
-      use ice_dyn_shared, only: kdyn
+      use ice_dyn_shared, only: kdyn, shearU
       use ice_flux, only: mlt_onset, frz_onset, albcnt, snwcnt
       use ice_grid, only: grid_ice, grid_outfile, &
           grid_atm_thrm, grid_atm_dynu, grid_atm_dynv, &
@@ -1368,7 +1368,7 @@
         !     "coastal drag form factor (unitless)", &
         !     "static; E-face on C-grid", c1, c0, ns1, f_F2E)
 
-         call define_hist_field(n_shearU,"shearU","%/day",tstr2D, tcstr, &
+         call define_hist_field(n_shearU,"shearU","%/day",ustr2D, ucstr, &
              "strain rate (shear) at U-points",                         &
              "shear is instantaneous, on U-grid", secday*c100, c0,      &
              ns1, f_shearU)
@@ -2206,14 +2206,13 @@
       use ice_blocks, only: block, get_block, nx_block, ny_block
       use ice_domain, only: blocks_ice, nblocks
       use ice_domain_size, only: nfsd
-      use ice_grid, only: tmask, lmask_n, lmask_s, dxU, dyU, grid_ice, & !dpath2o: F2E, F2N
+      use ice_grid, only: tmask, lmask_n, lmask_s, dxU, dyU, grid_ice!, & !dpath2o: F2E, F2N
       use ice_calendar, only: new_year, write_history, &
                               write_ic, timesecs, histfreq, nstreams, mmonth, &
                               new_month
       use ice_dyn_eap, only: a11, a12, e11, e12, e22, s11, s12, s22, &
           yieldstress11, yieldstress12, yieldstress22
       use ice_dyn_shared, only: kdyn, principal_stress
-      use ice_dyn_evp, only: shearU
       use ice_flux, only: fsw, flw, fsnow, frain, sst, sss, uocn, vocn, &
           frzmlt_init, scale_factor, fswabs, fswthru, alvdr, alvdf, alidr, alidf, &
           albice, albsno, albpnd, coszen, flat, fsens, flwout, evap, evaps, evapi, &
@@ -4136,7 +4135,7 @@
                        shear(i,j,iblk)*avail_hist_fields(n_shear(ns))%cona
                  ! dpath2o
                  if (n_shearU   (ns) /= 0) a2D(i,j,n_shearU(ns),iblk)     = &
-                       shear(i,j,iblk)*avail_hist_fields(n_shearU(ns))%cona
+                       shearU(i,j,iblk)*avail_hist_fields(n_shearU(ns))%cona
                  if (n_vort     (ns) /= 0) a2D(i,j,n_vort(ns),iblk)      = &
                        vort(i,j,iblk)*avail_hist_fields(n_vort(ns))%cona
                  if (n_sig1     (ns) /= 0) a2D(i,j,n_sig1(ns),iblk)      = &

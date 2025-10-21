@@ -2296,7 +2296,7 @@
          nx_block, ny_block, & ! block dimensions
          icellU
 
-      integer (kind=int_kind), intent(in) :: ksub, ndte
+      integer(kind=int_kind), intent(in), optional :: ksub, ndte
 
       integer (kind=int_kind), dimension (nx_block*ny_block), intent(in) :: &
          indxUi   , & ! compressed index in i-direction
@@ -2396,8 +2396,8 @@
          do j = 2, ny_block-1
             do i = 2, nx_block-1
                ! U(i,j) is “coastal” if any of its four surrounding faces is land
-               if ( epm(i  ,j  ) == c0 .or. epm(i  ,j-1) == c0 .or. &
-                    npm(i  ,j  ) == c0 .or. npm(i-1,j  ) == c0 ) then
+                if ( epm(i  ,j  ) == c0 .or. epm(i  ,j-1) == c0 .or. &
+                     npm(i  ,j  ) == c0 .or. npm(i-1,j  ) == c0 ) then
                   !$OMP CRITICAL (IO_DIAG)
                   write(nu_diag,'(a,2i6,1p,e16.8)') 'no-slip U-coast shearU  (i,j)=', i, j, shearU(i,j)
                   !$OMP END CRITICAL (IO_DIAG)

@@ -94,7 +94,7 @@
          strengthU(:,:,:) , & ! strength averaged to U points
          divergU  (:,:,:) , & ! div array on U points, differentiate from divu
          tensionU (:,:,:) , & ! tension array on U points
-         shearU   (:,:,:) , & ! shear array on U points
+         !shearU   (:,:,:) , & ! shear array on U points
          deltaU   (:,:,:) , & ! delta array on U points
          zetax2T  (:,:,:) , & ! zetax2 = 2*zeta (bulk viscosity)
          zetax2U  (:,:,:) , & ! zetax2T averaged to U points
@@ -114,6 +114,9 @@
          forceyU  (:,:,:) , & ! work array: combined atm stress and ocn tilt, y
          umass    (:,:,:) , & ! total mass of ice and snow (u grid)
          umassdti (:,:,:)     ! mass of U-cell/dte (kg/m^2 s)
+
+      real(kind=dbl_kind), allocatable, public :: &
+         shearU(:,:,:) ! shear array on U points
 
       public :: evp, init_evp
 
@@ -941,20 +944,6 @@
             ! NOTE these are actually strain rates * area  (m^2/s)
             !-----------------------------------------------------------------
                ! call strain_rates_U_free_slip (nx_block          , ny_block           , &
-               !                      icellU      (iblk),                      &
-               !                      indxUi    (:,iblk), indxUj     (:,iblk), &
-               !                      uvelE   (:,:,iblk), vvelE    (:,:,iblk), &
-               !                      uvelN   (:,:,iblk), vvelN    (:,:,iblk), &
-               !                      uvel    (:,:,iblk), vvel     (:,:,iblk), &
-               !                      dxE     (:,:,iblk), dyN      (:,:,iblk), &
-               !                      dxU     (:,:,iblk), dyU      (:,:,iblk), &
-               !                      ratiodxN(:,:,iblk), ratiodxNr(:,:,iblk), &
-               !                      ratiodyE(:,:,iblk), ratiodyEr(:,:,iblk), &
-               !                      epm     (:,:,iblk), npm      (:,:,iblk), &
-               !                      divergU (:,:,iblk), tensionU (:,:,iblk), &
-               !                      shearU  (:,:,iblk), deltaU   (:,:,iblk), &
-               !                      ksub              , ndte                 )
-               ! call strain_rates_U_free_slip_noratio (nx_block          , ny_block           , &
                !                      icellU      (iblk),                      &
                !                      indxUi    (:,iblk), indxUj     (:,iblk), &
                !                      uvelE   (:,:,iblk), vvelE    (:,:,iblk), &
