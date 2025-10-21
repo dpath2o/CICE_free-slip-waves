@@ -2393,11 +2393,10 @@
 
 !=======================================================================
 ! Compute strain rates at the U point — FREE-SLIP (Neumann)
-! Inputs are identical to strain_rates_U_no_slip
 ! Free-slip = zero normal flow; zero normal derivative of tangential
 !
 ! IMPORTANT:
-!  - Do NOT clamp ratios: use rp = -ratio (even reflection)
+!  - no clamping ratios: use rp = -ratio (mimic reflection)
 !  - No changes to calling signature versus no-slip version
 !  - Prints shearU at coastal U points (last subcycle only)
 !=======================================================================
@@ -2523,10 +2522,11 @@
    end subroutine strain_rates_U_free_slip
 
 !=======================================================================
-! Compute strain rates at the U point for Neumann boundary conditions
-! "free-slip" (no distance ratios; even reflection with unit factor)
+! Compute strain rates at the U point — FREE-SLIP (Neumann)
+! Free-slip = zero normal flow; zero normal derivative of tangential
+! this version does not use grid cell distance  (d[x|y][E|N]) ratios
 !
-! author: dpath2o (per request), Oct 2025
+! author: dpath2o, Oct 2025
 ! Notes:
 !  - When a neighbor face is land, substitute the interior face with
 !    an even reflection of *unit* magnitude (i.e., ghost = +interior).
@@ -2574,7 +2574,7 @@
          DeltaU(:,:)   = c0
 
          !---------------------------------------------------------------
-         ! Free-slip stencil at U without distance ratios:
+         ! Free-slip at U without distance ratios:
          ! If the neighbor face is land, use even reflection with unit
          ! factor: ghost = + interior. Implemented via mask switches.
          !---------------------------------------------------------------
