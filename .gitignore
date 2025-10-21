@@ -5,10 +5,43 @@
 # these are stored in gh-pages orphan branch
 doc/build
 
-# Ignore macOS cache files
-.DS_Store
-
-
 # Ignore testsuite file/directories
 testsuite*
 caselist*
+
+# Logs
+*.runlog.*
+*.bldlog.*
+logs/
+*.log
+ Build artifacts
+*.o
+*.obj
+*.mod
+*.a
+*.so
+*.dylib
+*.exe
+*.out
+# CMake & build dirs
+build/
+bld/
+obj/
+CMakeFiles/
+cmake-build*/
+*_deps/
+CMakeCache.txt
+cmake_install.cmake
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Data / heavy outputs
+*.nc
+*.zarr/
+*.tmp
+
+# System
+.DS_Store

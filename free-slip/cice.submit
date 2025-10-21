@@ -1,0 +1,5 @@
+#!/bin/csh -f 
+
+qsub  ./cice.run
+echo "`date` ${0}: free-slip job submitted"  >> /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/README.case
+

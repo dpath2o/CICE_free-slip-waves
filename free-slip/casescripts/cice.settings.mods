@@ -1,0 +1,28 @@
+# cice.setup settings
+setenv ICE_SANDBOX  /home/581/da1339/AFIM/src/CICE_free-slip
+setenv ICE_SCRIPTS  /home/581/da1339/AFIM/src/CICE_free-slip/configuration/scripts
+setenv ICE_CASENAME free-slip
+setenv ICE_CASEDIR  /home/581/da1339/AFIM/src/CICE_free-slip/free-slip
+setenv ICE_MACHINE  gadi1
+setenv ICE_ENVNAME  intel
+setenv ICE_MACHCOMP gadi1_intel
+setenv ICE_RUNDIR   /g/data/gv90/da1339/cice-dirs/runs/free-slip
+setenv ICE_GRID     gbox12
+setenv ICE_NTASKS   1
+setenv ICE_NTHRDS   1
+setenv ICE_BASELINE /g/data/gv90/da1339/cice-dirs/baseline
+setenv ICE_BASEGEN  UnDeFiNeD
+setenv ICE_BASECOM  UnDeFiNeD
+setenv ICE_SPVAL    UnDeFiNeD
+setenv ICE_CPPDEFS  
+setenv ICE_QUIETMODE  false
+setenv ICE_TEST     UnDeFiNeD
+setenv ICE_TESTNAME UnDeFiNeD
+setenv ICE_TESTID   UnDeFiNeD
+setenv ICE_BFBCOMP  UnDeFiNeD
+setenv ICE_ACCOUNT  da1339
+setenv ICE_QUEUE    normalbw
+setenv ICE_COVERAGE false
+
+# set_env.buildincremental
+setenv ICE_CLEANBUILD false

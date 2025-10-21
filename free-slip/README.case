@@ -1,0 +1,10 @@
+Wed Oct 22 02:50:00 AEDT 2025 ./cice.setup --case free-slip -g gbox12 -m gadi1 -e intel -p 1x1 -s boxforcee,boxclosed,buildincremental
+Wed Oct 22 02:50:00 AEDT 2025 ./cice.setup adding namelist modes set_nml.gbox12
+Wed Oct 22 02:50:00 AEDT 2025 ./cice.setup adding namelist modes set_nml.boxforcee
+Wed Oct 22 02:50:00 AEDT 2025 ./cice.setup adding namelist modes set_nml.boxclosed
+Wed Oct 22 02:50:00 AEDT 2025 ./cice.setup adding namelist modes set_env.buildincremental
+Wed Oct 22 03:02:03 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-030041
+Wed Oct 22 03:03:24 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 03:04:09 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153037183.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-030407
+Wed Oct 22 03:04:09 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153037183.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 03:04:09 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153037183.gadi-pbs.SC: CICE run completed successfully
