@@ -98,7 +98,7 @@ ncap2 -O -s "$REL_EXPR" "$DIFF_MAX" "$REL"
 
 echo
 echo "=== Numeric comparison (max over time,nj,ni) ==="
-printf "%-12s %16s %16s %16s %8s\n" "variable" "max|Δ|" "max|ref|" "rel=Δ/(ref+eps)" "PASS?"
+printf "%-12s %16s %16s %16s %8s\n" "variable" "max|delta|" "max|ref|" "rel=delta/(ref+eps)" "PASS?"
 all_pass=1
 for v in "${present_vars[@]}"; do
   d=$(ncks -H -C -v "$v"        "$REL" | awk -F'= ' '/=/{print $2}' | tr -d ' ;')
@@ -114,53 +114,66 @@ for v in "${present_vars[@]}"; do
   [[ "$pass" == "OK" ]] || all_pass=0
 done
 
-# -------- Edge sanity check (optional) --------
-if [[ $DO_EDGES -eq 1 ]]; then
-  echo
-  echo "=== Edge sanity check (coastal normals only) ==="
+# -------- Edge sanity check (coastal normals only) --------
+echo
+echo "=== Edge sanity check (coastal normals only) ==="
 
-  # Pick available face-normal names (either with or without _1)
-  pick_var(){ local a="$1" b="$2"
-    if ncks -q -C -H -v "$a" "$DIFF" >/dev/null 2>&1; then echo "$a"
-    elif ncks -q -C -H -v "$b" "$DIFF" >/dev/null 2>&1; then echo "$b"
-    else echo ""; fi; }
+# Pick available face-normal names (either with or without _1), from the diff file
+pick_var() {
+  local a="$1" b="$2"
+  if ncks -q -C -H -v "$a" "$DIFF_ABS" >/dev/null 2>&1; then echo "$a"
+  elif ncks -q -C -H -v "$b" "$DIFF_ABS" >/dev/null 2>&1; then echo "$b"
+  else echo ""
+  fi
+}
 
-  E_VAR=$(pick_var uvelE_1 uvelE)
-  N_VAR=$(pick_var vvelN_1 vvelN)
+E_VAR=$(pick_var uvelE_1 uvelE)   # normal on E-faces
+N_VAR=$(pick_var vvelN_1 vvelN)   # normal on N-faces
 
-  # Probe dims from any present (time,nj,ni) field
-  PROBE="$E_VAR"; [[ -z "$PROBE" ]] && PROBE="$N_VAR"
-  if [[ -z "$PROBE" ]]; then
-    echo "No E/N face-normal variable present in diff. Skipping edge check."
+# Robust ni/nj from metadata (works with ncks everywhere)
+get_dim_size() {
+  local file="$1" dim="$2"
+  ncks -m "$file" \
+  | awk -v d="$dim" '
+      BEGIN{ IGNORECASE=1 }
+      $1==d && $2=="=" { gsub(/;/,"",$3); print $3; exit }
+    '
+}
+
+NI=$(get_dim_size "$A_STD" ni || true)
+NJ=$(get_dim_size "$A_STD" nj || true)
+NI=$(($NI-1)) # index adjustment for zeroth counting
+NJ=$(($NJ-1))
+
+if [[ -z "${NI:-}" || -z "${NJ:-}" ]]; then
+  echo "Could not determine ni/nj from $A_STD; skipping edge check."
+else
+  # west/east edges for E faces (max over time,nj)
+  if [[ -n "$E_VAR" ]]; then
+    ncwa -O -y max -a time,nj -d ni,1,1          -v "$E_VAR" "$DIFF_ABS" "$tmp/max_uE_west.nc"
+    ncwa -O -y max -a time,nj -d ni,"$NI","$NI"  -v "$E_VAR" "$DIFF_ABS" "$tmp/max_uE_east.nc"
+    max_w=$(ncks -H -C -v "$E_VAR" "$tmp/max_uE_west.nc" | awk -F'= ' '/=/{gsub(/[ ;]/,"",$2); print $2}')
+    max_e=$(ncks -H -C -v "$E_VAR" "$tmp/max_uE_east.nc" | awk -F'= ' '/=/{gsub(/[ ;]/,"",$2); print $2}')
+    echo "max |delta_uN| on E faces: west=${max_w:-nan}, east=${max_e:-nan}"
   else
-    # Determine NI/NJ from A (robust to rec dim)
-    ncap2 -O -s "nj_dim=int(size(${PROBE},1)); ni_dim=int(size(${PROBE},2));" "$A_STD" "$DIMS" >/dev/null 2>&1 || true
-    NJ=$(ncks -H -C -v nj_dim "$DIMS" | awk -F'= ' '/=/{print $2}' | tr -d ' ;')
-    NI=$(ncks -H -C -v ni_dim "$DIMS" | awk -F'= ' '/=/{print $2}' | tr -d ' ;')
-    if [[ -z "${NI:-}" || -z "${NJ:-}" ]]; then
-      echo "Could not determine NI/NJ. Skipping edge check."
-    else
-      if [[ -n "$E_VAR" ]]; then
-        ncwa -O -y max -a time,nj -d ni,1,1         -v "$E_VAR" "$DIFF_ABS" "$tmp/max_uE_west.nc"
-        ncwa -O -y max -a time,nj -d ni,"$NI","$NI" -v "$E_VAR" "$DIFF_ABS" "$tmp/max_uE_east.nc"
-        max_w=$(ncks -H -C -v "$E_VAR" "$tmp/max_uE_west.nc" | awk -F'= ' '/=/{print $2}' | tr -d ' ;')
-        max_e=$(ncks -H -C -v "$E_VAR" "$tmp/max_uE_east.nc" | awk -F'= ' '/=/{print $2}' | tr -d ' ;')
-        echo "max |Δ u_n| on E faces: west=${max_w:-nan}, east=${max_e:-nan}"
-      fi
-      if [[ -n "$N_VAR" ]]; then
-        ncwa -O -y max -a time,ni -d nj,1,1         -v "$N_VAR" "$DIFF_ABS" "$tmp/max_vN_south.nc"
-        ncwa -O -y max -a time,ni -d nj,"$NJ","$NJ" -v "$N_VAR" "$DIFF_ABS" "$tmp/max_vN_north.nc"
-        max_s=$(ncks -H -C -v "$N_VAR" "$tmp/max_vN_south.nc" | awk -F'= ' '/=/{print $2}' | tr -d ' ;')
-        max_n=$(ncks -H -C -v "$N_VAR" "$tmp/max_vN_north.nc" | awk -F'= ' '/=/{print $2}' | tr -d ' ;')
-        echo "max |Δ v_n| on N faces: south=${max_s:-nan}, north=${max_n:-nan}"
-      fi
-    fi
+    echo "E-face normal variable (uvelE_1/uvelE) not found in diff; skipping E edge check."
+  fi
+
+  # south/north edges for N faces (max over time,ni)
+  if [[ -n "$N_VAR" ]]; then
+    ncwa -O -y max -a time,ni -d nj,1,1          -v "$N_VAR" "$DIFF_ABS" "$tmp/max_vN_south.nc"
+    ncwa -O -y max -a time,ni -d nj,"$NJ","$NJ"  -v "$N_VAR" "$DIFF_ABS" "$tmp/max_vN_north.nc"
+    max_s=$(ncks -H -C -v "$N_VAR" "$tmp/max_vN_south.nc" | awk -F'= ' '/=/{gsub(/[ ;]/,"",$2); print $2}')
+    max_n=$(ncks -H -C -v "$N_VAR" "$tmp/max_vN_north.nc" | awk -F'= ' '/=/{gsub(/[ ;]/,"",$2); print $2}')
+    echo "max |delta_vN| on N faces: south=${max_s:-nan}, north=${max_n:-nan}"
+  else
+    echo "N-face normal variable (vvelN_1/vvelN) not found in diff; skipping N edge check."
   fi
 fi
 
 echo
 if [[ $all_pass -eq 1 ]]; then
-  echo "OVERALL: PASS (within |Δ| <= ${ABS_TOL} OR relative <= ${REL_TOL})"
+  echo "OVERALL: PASS (within |delta| <= ${ABS_TOL} OR relative <= ${REL_TOL})"
   exit 0
 else
   echo "OVERALL: FAIL (at least one variable exceeds tolerances)"
