@@ -50,7 +50,8 @@
       private
       public :: init_grid1, init_grid2, grid_average_X2Y, makemask, &
                 alloc_grid, dealloc_grid, &
-                grid_neighbor_min, grid_neighbor_max
+                grid_neighbor_min, grid_neighbor_max, &
+                build_F2_form_factors_box_grid
 
       character (len=char_len_long), public :: &
          grid_format  , & ! file format ('bin'=binary or 'pop_nc'= pop netcdf or 'mom_nc'=mom (supergrid) netcdf)
@@ -173,6 +174,11 @@
 
       character (len=char_len), private :: &
          mask_fieldname !field/var name for the mask variable (in nc files)
+
+      ! coastal drag form factors
+      real(kind=dbl_kind), dimension (:,:,:), allocatable, save, public :: &
+         F2E, & ! coastal drag form factors on E-points 
+         F2N    ! coastal drag form factors on N-points
 
       interface grid_average_X2Y
          module procedure grid_average_X2Y_base , &
@@ -2601,6 +2607,91 @@
         deallocate(work_g1)
 
       end subroutine rectgrid_scale_dxdy
+
+!-----------------------------------------------------------------------
+! Boundary-only F2 builder for a rectangular C-grid test domain (CICE 6).
+! - F2E(i,j) are E (u) faces at the east side of T-cells (i,j).
+! - F2N(i,j) are N (v) faces at the north side of T-cells (i,j).
+! - Nonzero ONLY on physical boundary lines (one face thick), and which
+!   boundaries are active depends on wind tag adt_in.
+!   * 'uniform_north' or 'uniform_south' -> WEST & EAST active
+!   * 'uniform_west'  or 'uniform_east'  -> SOUTH & NORTH active
+!   * otherwise -> all four active
+! - On any active boundary, set BOTH F2E and F2N > 0 per your spec.
+!-----------------------------------------------------------------------
+      subroutine build_F2_form_factors_box_grid(adt_in)
+         use ice_kinds_mod
+         use ice_blocks       , only: get_block, nx_block, ny_block, block
+         use ice_domain       , only: nblocks, blocks_ice
+         use ice_domain_size  , only: max_blocks
+         use ice_fileunits    , only: nu_diag
+         implicit none
+         character(len=*), intent(in), optional :: adt_in
+
+         real(kind=dbl_kind), parameter :: F2_val = 0.25d0  ! placeholder constant
+         type(block) :: this_block
+         integer(kind=int_kind) :: iblk, i, j, ilo, ihi, jlo, jhi, jmid
+         character(len=32) :: adt
+         logical :: do_NS, do_EW
+
+         if (.not. allocated(F2E)) allocate(F2E(nx_block,ny_block,max_blocks))
+         if (.not. allocated(F2N)) allocate(F2N(nx_block,ny_block,max_blocks))
+         F2E = 0.0d0
+         F2N = 0.0d0
+
+         adt = 'both'
+         if (present(adt_in)) adt = trim(adt_in)
+
+         select case (adt)
+         case ('uniform_west','uniform_east')
+            do_NS = .true. ; do_EW = .false.     ! activate SOUTH & NORTH
+         case ('uniform_north','uniform_south')
+            do_NS = .false.; do_EW = .true.      ! activate WEST  & EAST
+         case default
+            do_NS = .true. ; do_EW = .true.
+         end select
+
+         write(nu_diag,'(a,a,2(a,l1))') 'build_F2(boundary-only): adt=',trim(adt),'  NS=',do_NS,'  EW=',do_EW
+
+         do iblk = 1, nblocks
+            this_block = get_block(blocks_ice(iblk), iblk)
+            ilo = this_block%ilo;  ihi = this_block%ihi
+            jlo = this_block%jlo;  jhi = this_block%jhi
+            jmid = (jlo + jhi)/2
+
+            ! ---- WEST/EAST boundaries (vertical sides) ----
+            if (do_EW) then
+               ! WEST boundary column: i = ilo
+               do j = jlo, jhi
+                  F2E(ilo, j, iblk) = F2_val   ! E-face on the west boundary column
+                  F2N(ilo, j, iblk) = F2_val   ! N-face belonging to that boundary column cell
+               end do
+               ! EAST boundary column: i = ihi
+               do j = jlo, jhi
+                  F2E(ihi, j, iblk) = F2_val
+                  F2N(ihi, j, iblk) = F2_val
+               end do
+            end if
+
+            ! ---- SOUTH/NORTH boundaries (horizontal sides) ----
+            if (do_NS) then
+               ! SOUTH boundary row: j = jlo
+               do i = ilo, ihi
+               F2E(i, jlo, iblk) = F2_val    ! E-face belonging to the south boundary row cell
+               F2N(i, jlo, iblk) = F2_val    ! N-face on the south boundary row
+               end do
+               ! NORTH boundary row: j = jhi
+               do i = ilo, ihi
+               F2E(i, jhi, iblk) = F2_val
+               F2N(i, jhi, iblk) = F2_val
+               end do
+            end if
+         end do
+
+         write(nu_diag,'(a,2es12.4,a,2es12.4)') 'build_F2: F2E(min,max)=', minval(F2E), maxval(F2E), &
+                                                '  F2N(min,max)=', minval(F2N), maxval(F2N)
+         write(nu_diag,'(a,i10,a,i10)') 'build_F2: active faces:  E=', count(F2E>0.0d0), '  N=', count(F2N>0.0d0)
+      end subroutine build_F2_form_factors_box_grid
 
 !=======================================================================
       ! Complex land mask for testing box cases

@@ -25,9 +25,9 @@
       private
       public :: set_evp_parameters, stepu, stepuv_CD, stepu_C, stepv_C, &
                 principal_stress, init_dyn_shared, dyn_prep1, dyn_prep2, dyn_finish, &
-                seabed_stress_factor_LKD, seabed_stress_factor_prob, &
+                seabed_stress_factor_LKD, seabed_stress_factor_prob, coastal_drag_stress_factor, &
                 deformations, deformationsC_T, deformationsCD_T, &
-                strain_rates, strain_rates_T, strain_rates_U, strain_rates_U_free_slip, &
+                strain_rates, strain_rates_T, strain_rates_U_no_slip, strain_rates_U_free_slip, &
                 visc_replpress, &
                 dyn_haloUpdate, &
                 stack_fields, unstack_fields
@@ -58,13 +58,14 @@
       ! other EVP parameters
 
       character (len=char_len), public :: &
-         yield_curve      , & ! 'ellipse' ('teardrop' needs further testing)
-         visc_method      , & ! method for viscosity calc at U points (C, CD grids)
-         seabed_stress_method ! method for seabed stress calculation
-                              ! LKD: Lemieux et al. 2015, probabilistic: Dupont et al. 2022
+         yield_curve          , & ! 'ellipse' ('teardrop' needs further testing)
+         visc_method          , & ! method for viscosity calc at U points (C, CD grids)
+         seabed_stress_method , & ! method for seabed stress calculation
+                                  ! LKD: Lemieux et al. 2015, probabilistic: Dupont et al. 2022
+         boundary_condition       ! 'no_slip' (Dirchlet) or 'free_slip' (Neumann); boundary conditions
 
       real (kind=dbl_kind), parameter, public :: &
-         u0    = 5e-5_dbl_kind, & ! residual velocity for seabed stress (m/s)
+         !u0    = 5e-5_dbl_kind, & ! residual velocity for seabed stress (m/s)
          cosw  = c1           , & ! cos(ocean turning angle)  ! turning angle = 0
          sinw  = c0               ! sin(ocean turning angle)  ! turning angle = 0
 
@@ -133,7 +134,7 @@
 
       ! seabed (basal) stress parameters and settings
       logical (kind=log_kind), public :: &
-         seabed_stress       ! if true, seabed stress for landfast on
+         seabed_stress  ! if true, seabed stress for landfast on
 
       real (kind=dbl_kind), public :: &
          k1              , & ! 1st free parameter for seabed1 grounding parameterization
@@ -141,6 +142,18 @@
          alphab          , & ! alphab=Cb factor in Lemieux et al 2015
          threshold_hw        ! max water depth for grounding
                              ! see keel data from Amundrud et al. 2004 (JGR)
+
+      ! coastal drag parameters and settings
+      logical (kind=log_kind), public :: &
+         coastal_drag, &     ! if true, coastal drag stress for landfast on
+         create_form_factors ! if true, create the coastal form factors using the coastline
+
+      ! character (len=char_len), public :: &
+      !    coastline_file       ! NetCDF of coastline
+
+      real(kind=dbl_kind), public :: &
+         Cs, &  ! static function coefficient; Liu et al. (2022) eq.13; 1.0*10^{−4} m/s^2
+         u0     ! residual velocity for coastal drag stress (and seabed stress) (m/s)
 
       interface strain_rates_T
          module procedure strain_rates_Tdt
@@ -590,7 +603,9 @@
                             stress12_3, stress12_4, &
                             uvel_init,  vvel_init,  &
                             uvel,       vvel,       &
-                            TbU)
+                            TbU,                    &
+                            Kux,        Kuy,        &
+                            Ku                      )
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block, & ! block dimensions
@@ -639,6 +654,9 @@
          forcex  , & ! work array: combined atm stress and ocn tilt, x
          forcey      ! work array: combined atm stress and ocn tilt, y
 
+      real(kind=dbl_kind), dimension(nx_block,ny_block), intent(out), optional :: &
+         Ku          ! coastal drag stress factor (N/m^2)
+
       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
          fm      , & ! Coriolis param. * mass in U-cell (kg/s)
          stressp_1, stressp_2, stressp_3, stressp_4 , & ! sigma11+sigma22
@@ -654,6 +672,9 @@
          strinty , & ! divergence of internal ice stress, y (N/m^2)
          taubx   , & ! seabed stress, x-direction (N/m^2)
          tauby       ! seabed stress, y-direction (N/m^2)
+
+      real(kind=dbl_kind), dimension(nx_block,ny_block), intent(inout), optional :: &
+         Kux, Kuy    ! coastal drag stress factors in x- & y-directions (N/m^2)
 
       ! local variables
 
@@ -682,6 +703,9 @@
          TbU      (i,j) = c0
          taubx    (i,j) = c0
          tauby    (i,j) = c0
+         if (present(Ku )) Ku (i,j) = c0
+         if (present(Kux)) Kux(i,j) = c0
+         if (present(Kuy)) Kuy(i,j) = c0
 
          if (.not.iceTmask(i,j)) then
             stressp_1 (i,j) = c0
@@ -1051,14 +1075,15 @@
       subroutine stepu_C (nx_block,   ny_block, &
                           icell,      Cw,       &
                           indxi,      indxj,    &
-                                      aiX,      &
+                          aiX,                  &
                           uocn,       vocn,     &
                           waterx,     forcex,   &
                           massdti,    fm,       &
                           strintx,    taubx,    &
                           uvel_init,            &
                           uvel,       vvel,     &
-                          Tb)
+                          Tb,                   &
+                          Kux,        Ku        )
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block, & ! block dimensions
@@ -1080,11 +1105,13 @@
          fm      , & ! Coriolis param. * mass in e-cell (kg/s)
          strintx , & ! divergence of internal ice stress, x (N/m^2)
          Cw      , & ! ocean-ice neutral drag coefficient
-         vvel        ! y-component of velocity (m/s) interpolated to E location
+         vvel    , & ! y-component of velocity (m/s) interpolated to E location
+         Ku          ! coastal (lateral) stress factor (N/m^2)
 
       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
          uvel    , & ! x-component of velocity (m/s)
-         taubx       ! seabed stress, x-direction (N/m^2)
+         taubx   , & ! seabed stress, x-direction (N/m^2)
+         Kux         ! coastal (lateral) stress, x-direction (N/m^2)
 
       ! local variables
 
@@ -1097,7 +1124,8 @@
          cca,ccb,ccc,cc1    , & ! intermediate variables
          taux               , & ! part of ocean stress term
          Cb                 , & ! complete seabed (basal) stress coeff
-         rhow                   !
+         rhow               , & ! density of water
+         Cl
 
       character(len=*), parameter :: subname = '(stepu_C)'
 
@@ -1125,23 +1153,22 @@
 
          ccc = sqrt(uold**2 + vold**2) + u0
          Cb  = Tb(i,j) / ccc ! for seabed stress
-         ! revp = 0 for classic evp, 1 for revised evp
-         cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb ! kg/m^2 s
-
+         Cl  = Ku(i,j) / ccc ! for coastal drag
+         cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb + Cl ! kg/m^2 s
          ccb = fm(i,j) + sign(c1,fm(i,j)) * vrel * sinw ! kg/m^2 s
 
          ! compute the velocity components
-         cc1 = strintx(i,j) + forcex(i,j) + taux &
-             + massdti(i,j)*(brlx*uold + revp*uvel_init(i,j))
-
+         cc1 = strintx(i,j) + forcex(i,j) + taux + massdti(i,j)*(brlx*uold + revp*uvel_init(i,j))
          uvel(i,j) = (ccb*vold + cc1) / cca ! m/s
 
          ! calculate seabed stress component for outputs
          ! only needed on last iteration.
          taubx(i,j) = -uvel(i,j)*Cb
 
-      enddo                     ! ij
+         ! calculate the coastal (lateral) drag stress component for output
+         Kux(i,j) = -uvel(i,j)*Cl
 
+      enddo                     ! ij
       end subroutine stepu_C
 
 !=======================================================================
@@ -1154,10 +1181,11 @@
                           uocn,       vocn,     &
                           watery,     forcey,   &
                           massdti,    fm,       &
-                          strinty,    tauby,    &
+                          strinty,    tauby,    & 
                           vvel_init,            &
                           uvel,       vvel,     &
-                          Tb)
+                          Tb,                   &
+                          Kuy,         Ku       )
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block, & ! block dimensions
@@ -1179,11 +1207,13 @@
          fm      , & ! Coriolis param. * mass in n-cell (kg/s)
          strinty , & ! divergence of internal ice stress, y (N/m^2)
          Cw      , & ! ocean-ice neutral drag coefficient
-         uvel        ! x-component of velocity (m/s) interpolated to N location
+         uvel    , & ! x-component of velocity (m/s) interpolated to N location
+         Ku          ! coastal (lateral) stress factor (N/m^2)
 
       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
          vvel    , & ! y-component of velocity (m/s)
-         tauby       ! seabed stress, y-direction (N/m^2)
+         tauby   , & ! seabed stress, y-direction (N/m^2)
+         Kuy         ! coastal (lateral) stress, y-direction (N/m^2)
 
       ! local variables
 
@@ -1196,7 +1226,8 @@
          cca,ccb,ccc,cc2    , & ! intermediate variables
          tauy               , & ! part of ocean stress term
          Cb                 , & ! complete seabed (basal) stress coeff
-         rhow                   !
+         rhow               , & ! density of water
+         Cl
 
       character(len=*), parameter :: subname = '(stepv_C)'
 
@@ -1224,24 +1255,222 @@
 
          ccc = sqrt(uold**2 + vold**2) + u0
          Cb  = Tb(i,j) / ccc ! for seabed stress
-         ! revp = 0 for classic evp, 1 for revised evp
-         cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb ! kg/m^2 s
-
+         Cl  = Ku(i,j) / ccc ! for coastal drag
+         cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb + Cl ! kg/m^2 s
          ccb = fm(i,j) + sign(c1,fm(i,j)) * vrel * sinw ! kg/m^2 s
 
          ! compute the velocity components
-         cc2 = strinty(i,j) + forcey(i,j) + tauy &
-             + massdti(i,j)*(brlx*vold + revp*vvel_init(i,j))
-
+         cc2 = strinty(i,j) + forcey(i,j) + tauy + massdti(i,j)*(brlx*vold + revp*vvel_init(i,j))
          vvel(i,j) = (-ccb*uold + cc2) / cca
 
          ! calculate seabed stress component for outputs
          ! only needed on last iteration.
          tauby(i,j) = -vvel(i,j)*Cb
 
+         ! calculate the coastal (lateral) drag stress component for output
+         Kuy(i,j) = -vvel(i,j)*Cl
+
       enddo                     ! ij
 
       end subroutine stepv_C
+
+! !=======================================================================
+! ! Integration of the momentum equation to find velocity u at E location on C grid
+
+!       subroutine stepu_C (nx_block,   ny_block, &
+!                           icell,      Cw,       &
+!                           indxi,      indxj,    &
+!                                       aiX,      &
+!                           uocn,       vocn,     &
+!                           waterx,     forcex,   &
+!                           massdti,    fm,       &
+!                           strintx,    taubx,    &
+!                           uvel_init,            &
+!                           uvel,       vvel,     &
+!                           Tb)
+
+!       integer (kind=int_kind), intent(in) :: &
+!          nx_block, ny_block, & ! block dimensions
+!          icell                 ! total count when ice[en]mask is true
+
+!       integer (kind=int_kind), dimension (nx_block*ny_block), intent(in) :: &
+!          indxi   , & ! compressed index in i-direction
+!          indxj       ! compressed index in j-direction
+
+!       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(in) :: &
+!          Tb,       & ! seabed stress factor (N/m^2)
+!          uvel_init,& ! x-component of velocity (m/s), beginning of timestep
+!          aiX     , & ! ice fraction on X-grid
+!          waterx  , & ! for ocean stress calculation, x (m/s)
+!          forcex  , & ! work array: combined atm stress and ocn tilt, x
+!          massdti , & ! mass of e-cell/dt (kg/m^2 s)
+!          uocn    , & ! ocean current, x-direction (m/s)
+!          vocn    , & ! ocean current, y-direction (m/s)
+!          fm      , & ! Coriolis param. * mass in e-cell (kg/s)
+!          strintx , & ! divergence of internal ice stress, x (N/m^2)
+!          Cw      , & ! ocean-ice neutral drag coefficient
+!          vvel        ! y-component of velocity (m/s) interpolated to E location
+
+!       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
+!          uvel    , & ! x-component of velocity (m/s)
+!          taubx       ! seabed stress, x-direction (N/m^2)
+
+!       ! local variables
+
+!       integer (kind=int_kind) :: &
+!          i, j, ij
+
+!       real (kind=dbl_kind) :: &
+!          uold, vold         , & ! old-time uvel, vvel
+!          vrel               , & ! relative ice-ocean velocity
+!          cca,ccb,ccc,cc1    , & ! intermediate variables
+!          taux               , & ! part of ocean stress term
+!          Cb                 , & ! complete seabed (basal) stress coeff
+!          rhow                   !
+
+!       character(len=*), parameter :: subname = '(stepu_C)'
+
+!       !-----------------------------------------------------------------
+!       ! integrate the momentum equation
+!       !-----------------------------------------------------------------
+
+!       call icepack_query_parameters(rhow_out=rhow)
+!       call icepack_warnings_flush(nu_diag)
+!       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
+!          file=__FILE__, line=__LINE__)
+
+!       do ij =1, icell
+!          i = indxi(ij)
+!          j = indxj(ij)
+
+!          uold = uvel(i,j)
+!          vold = vvel(i,j)
+
+!          ! (magnitude of relative ocean current)*rhow*drag*aice
+!          vrel = aiX(i,j)*rhow*Cw(i,j)*sqrt((uocn(i,j) - uold)**2 + &
+!                                            (vocn(i,j) - vold)**2)  ! m/s
+!          ! ice/ocean stress
+!          taux = vrel*waterx(i,j) ! NOTE this is not the entire
+
+!          ccc = sqrt(uold**2 + vold**2) + u0
+!          Cb  = Tb(i,j) / ccc ! for seabed stress
+!          ! revp = 0 for classic evp, 1 for revised evp
+!          cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb ! kg/m^2 s
+
+!          ccb = fm(i,j) + sign(c1,fm(i,j)) * vrel * sinw ! kg/m^2 s
+
+!          ! compute the velocity components
+!          cc1 = strintx(i,j) + forcex(i,j) + taux &
+!              + massdti(i,j)*(brlx*uold + revp*uvel_init(i,j))
+
+!          uvel(i,j) = (ccb*vold + cc1) / cca ! m/s
+
+!          ! calculate seabed stress component for outputs
+!          ! only needed on last iteration.
+!          taubx(i,j) = -uvel(i,j)*Cb
+
+!       enddo                     ! ij
+
+!       end subroutine stepu_C
+
+! !=======================================================================
+! ! Integration of the momentum equation to find velocity v at N location on C grid
+
+!       subroutine stepv_C (nx_block,   ny_block, &
+!                           icell,      Cw,       &
+!                           indxi,      indxj,    &
+!                                       aiX,      &
+!                           uocn,       vocn,     &
+!                           watery,     forcey,   &
+!                           massdti,    fm,       &
+!                           strinty,    tauby,    &
+!                           vvel_init,            &
+!                           uvel,       vvel,     &
+!                           Tb)
+
+!       integer (kind=int_kind), intent(in) :: &
+!          nx_block, ny_block, & ! block dimensions
+!          icell                 ! total count when ice[en]mask is true
+
+!       integer (kind=int_kind), dimension (nx_block*ny_block), intent(in) :: &
+!          indxi   , & ! compressed index in i-direction
+!          indxj       ! compressed index in j-direction
+
+!       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(in) :: &
+!          Tb,       & ! seabed stress factor (N/m^2)
+!          vvel_init,& ! y-component of velocity (m/s), beginning of timestep
+!          aiX     , & ! ice fraction on X-grid
+!          watery  , & ! for ocean stress calculation, y (m/s)
+!          forcey  , & ! work array: combined atm stress and ocn tilt, y
+!          massdti , & ! mass of n-cell/dt (kg/m^2 s)
+!          uocn    , & ! ocean current, x-direction (m/s)
+!          vocn    , & ! ocean current, y-direction (m/s)
+!          fm      , & ! Coriolis param. * mass in n-cell (kg/s)
+!          strinty , & ! divergence of internal ice stress, y (N/m^2)
+!          Cw      , & ! ocean-ice neutral drag coefficient
+!          uvel        ! x-component of velocity (m/s) interpolated to N location
+
+!       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
+!          vvel    , & ! y-component of velocity (m/s)
+!          tauby       ! seabed stress, y-direction (N/m^2)
+
+!       ! local variables
+
+!       integer (kind=int_kind) :: &
+!          i, j, ij
+
+!       real (kind=dbl_kind) :: &
+!          uold, vold         , & ! old-time uvel, vvel
+!          vrel               , & ! relative ice-ocean velocity
+!          cca,ccb,ccc,cc2    , & ! intermediate variables
+!          tauy               , & ! part of ocean stress term
+!          Cb                 , & ! complete seabed (basal) stress coeff
+!          rhow                   !
+
+!       character(len=*), parameter :: subname = '(stepv_C)'
+
+!       !-----------------------------------------------------------------
+!       ! integrate the momentum equation
+!       !-----------------------------------------------------------------
+
+!       call icepack_query_parameters(rhow_out=rhow)
+!       call icepack_warnings_flush(nu_diag)
+!       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
+!          file=__FILE__, line=__LINE__)
+
+!       do ij =1, icell
+!          i = indxi(ij)
+!          j = indxj(ij)
+
+!          uold = uvel(i,j)
+!          vold = vvel(i,j)
+
+!          ! (magnitude of relative ocean current)*rhow*drag*aice
+!          vrel = aiX(i,j)*rhow*Cw(i,j)*sqrt((uocn(i,j) - uold)**2 + &
+!                                            (vocn(i,j) - vold)**2)  ! m/s
+!          ! ice/ocean stress
+!          tauy = vrel*watery(i,j) ! NOTE this is not the entire ocn stress
+
+!          ccc = sqrt(uold**2 + vold**2) + u0
+!          Cb  = Tb(i,j) / ccc ! for seabed stress
+!          ! revp = 0 for classic evp, 1 for revised evp
+!          cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb ! kg/m^2 s
+
+!          ccb = fm(i,j) + sign(c1,fm(i,j)) * vrel * sinw ! kg/m^2 s
+
+!          ! compute the velocity components
+!          cc2 = strinty(i,j) + forcey(i,j) + tauy &
+!              + massdti(i,j)*(brlx*vold + revp*vvel_init(i,j))
+
+!          vvel(i,j) = (-ccb*uold + cc2) / cca
+
+!          ! calculate seabed stress component for outputs
+!          ! only needed on last iteration.
+!          tauby(i,j) = -vvel(i,j)*Cb
+
+!       enddo                     ! ij
+
+!       end subroutine stepv_C
 
 !=======================================================================
 ! Calculation of the ice-ocean stress.
@@ -1324,6 +1553,54 @@
       enddo
 
       end subroutine dyn_finish
+
+!=======================================================================
+! Compute coastal (lateral) drag "Ku" (for landfast ice) based on mean
+! sea ice thickness, drift speed, a static yet gridded Form factor (describing
+! roughness of coastaline), and two namelist parameters Cs and Cq. This is based
+! on the work done by:
+!
+! Yuqing Liu, Y.; Losch, M.; Hutter, N.; Longjian, M.
+! A New Parameterization of Coastal Drag to Simulate Landfast Ice in Deep 
+! Marginal Seas in the Arctic; J. Geophys. Res. Oceans, 127,
+! doi: https://doi.org/10.1029/2022JC018413 
+!
+! authors: dpath2o, JF Lemieux, Mathieu Plante, Martin Losch
+      subroutine coastal_drag_stress_factor(nx_block, ny_block, &
+                                            icellU  ,           &
+                                            indxUi  , indxUj  , &
+                                            imass   ,           &
+                                            Ku      ,           & 
+                                            F2                  ) 
+      character(len=*), parameter :: subname = '(coastal_drag_stress_factor)'
+      ! blocks:
+      integer (kind=int_kind), intent(in) :: &
+         nx_block, ny_block, & ! block dimensions
+         icellU                ! no. of cells where ice[uen]mask = 1
+      ! loop indeces
+      integer (kind=int_kind) :: i, j, ij
+      ! directional (grid) indeces:
+      integer (kind=int_kind), dimension (nx_block*ny_block), intent(in) :: &
+         indxUi, & ! compressed index in i-direction
+         indxUj    ! compressed index in j-direction
+      ! sea ice variables: 
+      real (kind=dbl_kind), dimension (nx_block,ny_block), intent(in) :: &
+         imass, & ! total mass of sea ice (includes snow) at E or N grid points
+         F2       ! coastline form factor -- computed offline; (N/m^2)
+      ! compute Ku at each grid point 
+      ! (away from the coast it should go to zero as F2 goes to zero)
+      real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
+         Ku       ! coastal drag stress factor (N/m^2)
+      ! (optional but handy: print once on master)
+      ! if (my_task == master_task) then
+      !    write(nu_diag, '(a,2f12.5)') 'ice_dyn_shared.F90 F2(min,max)=', minval(F2), maxval(F2)
+      ! endif
+      do ij = 1, icellU
+         i       = indxUi(ij)
+         j       = indxUj(ij)
+         Ku(i,j) = imass(i,j) * F2(i,j) * Cs
+      enddo ! ij
+      end subroutine coastal_drag_stress_factor
 
 !=======================================================================
 ! Computes seabed (basal) stress factor TbU (landfast ice) based on mean
@@ -2277,26 +2554,26 @@
 ! author: JF Lemieux, ECCC
 ! Nov 2021
 
-      subroutine strain_rates_U (nx_block,   ny_block,  &
-                                 icellU,                &
-                                 indxUi,     indxUj,    &
-                                 uvelE,      vvelE,     &
-                                 uvelN,      vvelN,     &
-                                 uvelU,      vvelU,     &
-                                 dxE,        dyN,       &
-                                 dxU,        dyU,       &
-                                 ratiodxN,   ratiodxNr, &
-                                 ratiodyE,   ratiodyEr, &
-                                 epm,        npm,       &
-                                 divergU,    tensionU,  &
-                                 shearU,     DeltaU,    &
-                                 ksub,       ndte       )
+      subroutine strain_rates_U_no_slip (nx_block,   ny_block,  &
+                                          icellU,                &
+                                          indxUi,     indxUj,    &
+                                          uvelE,      vvelE,     &
+                                          uvelN,      vvelN,     &
+                                          uvelU,      vvelU,     &
+                                          dxE,        dyN,       &
+                                          dxU,        dyU,       &
+                                          ratiodxN,   ratiodxNr, &
+                                          ratiodyE,   ratiodyEr, &
+                                          epm,        npm,       &
+                                          divergU,    tensionU,  &
+                                          shearU,     DeltaU,    &
+                                          ksub,       ndte       )
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block, & ! block dimensions
          icellU
 
-      integer(kind=int_kind), intent(in), optional :: ksub, ndte
+      integer(kind=int_kind), intent(in) :: ksub, ndte
 
       integer (kind=int_kind), dimension (nx_block*ny_block), intent(in) :: &
          indxUi   , & ! compressed index in i-direction
@@ -2388,26 +2665,23 @@
 
          ! Delta (in the denominator of zeta, eta)
          DeltaU(i,j)   = sqrt(divergU(i,j)**2 + e_factor*(tensionU(i,j)**2 + shearU(i,j)**2))
-
-      enddo
-
-      ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
-      if (ksub == ndte) then
-         do j = 2, ny_block-1
-            do i = 2, nx_block-1
-               ! U(i,j) is “coastal” if any of its four surrounding faces is land
-                if ( epm(i  ,j  ) == c0 .or. epm(i  ,j-1) == c0 .or. &
-                     npm(i  ,j  ) == c0 .or. npm(i-1,j  ) == c0 ) then
+         ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
+         if (ksub == ndte) then
+            ! U(i,j) is the NE corner of T(i,j). It is "coastal" if any of the
+            ! four faces meeting at the corner are land (mask==0).
+            ! Adjacent faces around U(i,j): E(i,j), E(i,j-1), N(i,j), N(i-1,j)
+            if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
+               if ( (epm(i  ,j  ) == c0) .or. (epm(i  ,j-1) == c0) .or. &
+                    (npm(i  ,j  ) == c0) .or. (npm(i-1,j  ) == c0) ) then
                   !$OMP CRITICAL (IO_DIAG)
                   write(nu_diag,'(a,2i6,1p,e16.8)') 'no-slip U-coast shearU  (i,j)=', i, j, shearU(i,j)
                   !$OMP END CRITICAL (IO_DIAG)
                end if
-            end do
-         end do
-         call flush(nu_diag)
-      end if
-
-      end subroutine strain_rates_U
+            end if
+         end if
+      enddo
+      if (ksub == ndte) call flush(nu_diag)
+      end subroutine strain_rates_U_no_slip
 
 !=======================================================================
 ! Compute strain rates at the U point — FREE-SLIP (Neumann)
@@ -2423,7 +2697,6 @@
 !    continuation so that the normal derivative of the tangential
 !    component vanishes at the wall.
 !  - Signature kept identical to the no-slip routine.
-!=======================================================================
       subroutine strain_rates_U_free_slip(nx_block, ny_block,  &
                                           icellU,              &
                                           indxUi,   indxUj,    &
@@ -2489,24 +2762,22 @@
             ! shear = 2 e_12
             shearU(i,j) =  dxU(i,j) * (uEijp1 - uEij) - uvelU(i,j) * (dxE(i  ,j+1) - dxE(i,j))  &
                         +  dyU(i,j) * (vNip1j - vNij) - vvelU(i,j) * (dyN(i+1,j  ) - dyN(i,j))
-         end do
-
          ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
          if (ksub == ndte) then
-            do j = 2, ny_block-1
-               do i = 2, nx_block-1
-                  ! U(i,j) is “coastal” if any of its four surrounding faces is land
-                  if ( epm(i  ,j  ) == c0 .or. epm(i  ,j-1) == c0 .or. &
-                     npm(i  ,j  ) == c0 .or. npm(i-1,j  ) == c0 ) then
-                     !$OMP CRITICAL (IO_DIAG)
-                     write(nu_diag,'(a,2i6,1p,e16.8)') 'free-slip U-coast shearU  (i,j)=', i, j, shearU(i,j)
-                     !$OMP END CRITICAL (IO_DIAG)
-                  end if
-               end do
-            end do
-            call flush(nu_diag)
+            ! U(i,j) is the NE corner of T(i,j). It is "coastal" if any of the
+            ! four faces meeting at the corner are land (mask==0).
+            ! Adjacent faces around U(i,j): E(i,j), E(i,j-1), N(i,j), N(i-1,j)
+            if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
+               if ( (epm(i  ,j  ) == c0) .or. (epm(i  ,j-1) == c0) .or. &
+                    (npm(i  ,j  ) == c0) .or. (npm(i-1,j  ) == c0) ) then
+                  !$OMP CRITICAL (IO_DIAG)
+                  write(nu_diag,'(a,2i6,1p,e16.8)') 'free-slip U-coast shearU  (i,j)=', i, j, shearU(i,j)
+                  !$OMP END CRITICAL (IO_DIAG)
+               end if
+            end if
          end if
-
+      enddo
+      if (ksub == ndte) call flush(nu_diag)
       end subroutine strain_rates_U_free_slip
 
 !=======================================================================

@@ -362,13 +362,7 @@
            f_s22       = 'x', &
            f_yieldstress11  = 'x', &
            f_yieldstress12  = 'x', &
-           f_yieldstress22  = 'x', &
-           ! dpath2o
-         !   f_Kux  = 'x', f_Kuy  = 'x', &
-         !   f_KuxN = 'x', f_KuyN = 'x', &
-         !   f_KuxE = 'x', f_KuyE = 'x', &
-         !   f_F2N  = 'x', f_F2E  = 'x', &
-           f_shearU = 'x'
+           f_yieldstress22  = 'x'
 
       !---------------------------------------------------------------
       ! namelist variables
@@ -540,12 +534,7 @@
            f_s22,       &
            f_yieldstress11, &
            f_yieldstress12, &
-           f_yieldstress22, &
-           ! dpath2o
-         !   f_Kux , f_Kuy, f_F2N, f_F2E , &
-         !   f_KuxN, f_KuyN, &
-         !   f_KuxE, f_KuyE, &
-           f_shearU
+           f_yieldstress22
 
       !---------------------------------------------------------------
       ! field indices
@@ -746,13 +735,7 @@
            n_s11         , n_s12       , &
            n_s22         , &
            n_yieldstress11, n_yieldstress12, &
-           n_yieldstress22, &
-           ! dpath2o
-         !   n_Kux , n_Kuy , &
-         !   n_KuxN, n_KuyN, &
-         !   n_KuxE, n_KuyE, &
-         !   n_F2N , n_F2E , &
-           n_shearU
+           n_yieldstress22
 
       interface accum_hist_field ! generic interface
            module procedure accum_hist_field_2D, &

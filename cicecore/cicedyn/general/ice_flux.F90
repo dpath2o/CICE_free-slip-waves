@@ -112,10 +112,13 @@
          dardg1dt, & ! rate of area loss by ridging ice (1/s)
          dardg2dt, & ! rate of area gain by new ridges (1/s)
          dvirdgdt, & ! rate of ice volume ridged (m/s)
-         opening !, & ! rate of opening due to divergence/shear (1/s)
-         ! dpath2o
-         ! KuxN, KuyN, KuxE, KuyE, & ! coastal drag stress components on C-grid (N/m^2)
-         ! shearU
+         opening,  & ! rate of opening due to divergence/shear (1/s)
+         KuxU,     & !
+         KuyU,     & ! 
+         KuxN,     & ! coastal drag stress components (N/m^2), x-direction N-points
+         KuyN,     & ! coastal drag stress components (N/m^2), y-direction N-points
+         KuxE,     & ! coastal drag stress components (N/m^2), x-direction E-points
+         KuyE        ! coastal drag stress components (N/m^2), y-direction E-points
 
       real (kind=dbl_kind), dimension (:,:,:,:), allocatable, public :: &
        ! ridging diagnostics in categories
@@ -150,9 +153,10 @@
          fmE      , & ! Coriolis param. * mass in E-cell (kg/s)
          TbE      , & ! factor for seabed stress (N/m^2)
          fmN      , & ! Coriolis param. * mass in N-cell (kg/s)
-         TbN      !, & ! factor for seabed stress (N/m^2)
-         ! dpath2o
-         ! KuN, KuE     ! coastal drag stress on C-grid component locations (N/m^2)
+         TbN      , & ! factor for seabed stress (N/m^2)
+         KuU      , & ! 
+         KuN      , & ! coastal drag stress (N/m^2) at N-points
+         KuE          ! coastal drag stress (N/m^2) at E-points
 
       !-----------------------------------------------------------------
       ! Thermodynamic component
@@ -662,14 +666,13 @@
          stresspU   (nx_block,ny_block,max_blocks), & ! sigma11+sigma22
          stressmU   (nx_block,ny_block,max_blocks), & ! sigma11-sigma22
          stress12U  (nx_block,ny_block,max_blocks), & ! sigma12
-         ! dpath2o
-         ! KuN        (nx_block,ny_block,max_blocks), & ! coastal drag stress factor at N points (landfast ice)
-         ! KuxN       (nx_block,ny_block,max_blocks), & ! coastal drag stress (x) at N points (N/m^2)
-         ! KuyN       (nx_block,ny_block,max_blocks), & ! coastal drag stress (y) at N points (N/m^2)
-         ! KuE        (nx_block,ny_block,max_blocks), & ! coastal drag stress factor at E points (landfast ice)
-         ! KuxE       (nx_block,ny_block,max_blocks), & ! coastal drag stress (x) at E points (N/m^2)
-         ! KuyE       (nx_block,ny_block,max_blocks), & ! coastal drag stress (y) at E points (N/m^2)
-         ! shearU     (nx_block,ny_block,max_blocks), & !
+         KuU        (nx_block,ny_block,max_blocks), & ! coastal drag stress factor at U points (landfast ice)
+         KuN        (nx_block,ny_block,max_blocks), & ! coastal drag stress factor at N points (landfast ice)
+         KuxN       (nx_block,ny_block,max_blocks), & ! coastal drag stress (x) at N points (N/m^2)
+         KuyN       (nx_block,ny_block,max_blocks), & ! coastal drag stress (y) at N points (N/m^2)
+         KuE        (nx_block,ny_block,max_blocks), & ! coastal drag stress factor at E points (landfast ice)
+         KuxE       (nx_block,ny_block,max_blocks), & ! coastal drag stress (x) at E points (N/m^2)
+         KuyE       (nx_block,ny_block,max_blocks), & ! coastal drag stress (y) at E points (N/m^2)
          stat=ierr)
       if (ierr/=0) call abort_ice('(alloc_flux): Out of memory (C or CD grid)')
 
@@ -1151,7 +1154,7 @@
       vort    (:,:,:) = c0
       taubxU  (:,:,:) = c0
       taubyU  (:,:,:) = c0
-      strength(:,:,:) = c0
+      strength (:,:,:) = c0
       strocnxU(:,:,:) = c0
       strocnyU(:,:,:) = c0
       strairxU(:,:,:) = c0
@@ -1209,14 +1212,13 @@
          strintyN   (:,:,:) = c0
          fmN        (:,:,:) = c0
          TbN        (:,:,:) = c0
-         ! dpath2o
-         ! KuN        (:,:,:) = c0
-         ! KuE        (:,:,:) = c0
-         ! KuxN       (:,:,:) = c0
-         ! KuyN       (:,:,:) = c0
-         ! KuxE       (:,:,:) = c0
-         ! KuyE       (:,:,:) = c0
-         ! shearU     (:,:,:) = c0
+         KuU        (:,:,:) = c0
+         KuN        (:,:,:) = c0
+         KuE        (:,:,:) = c0
+         KuxN       (:,:,:) = c0
+         KuyN       (:,:,:) = c0
+         KuxE       (:,:,:) = c0
+         KuyE       (:,:,:) = c0
       end if
       end subroutine init_history_dyn
 

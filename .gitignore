@@ -23,6 +23,8 @@ logs/
 *.dylib
 *.exe
 *.out
+*.OU
+
 # CMake & build dirs
 build/
 bld/
@@ -42,6 +44,7 @@ __pycache__/
 *.nc
 *.zarr/
 *.tmp
+*.mp4
 
 # System
 .DS_Store

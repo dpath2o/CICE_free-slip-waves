@@ -114,16 +114,19 @@
           grid_ocn, grid_ocn_thrm, grid_ocn_dynu, grid_ocn_dynv, &
           grid_atm, grid_atm_thrm, grid_atm_dynu, grid_atm_dynv, &
           dxrect, dyrect, dxscale, dyscale, scale_dxdy, &
-          lonrefrect, latrefrect, save_ghte_ghtn
+          lonrefrect, latrefrect, save_ghte_ghtn, &
+          build_F2_form_factors_box_grid, F2E, F2N
       use ice_dyn_shared, only: &
           ndte, kdyn, revised_evp, yield_curve, &
           evp_algorithm, visc_method,     &
-          seabed_stress, seabed_stress_method,  &
+          seabed_stress, seabed_stress_method, &
+          boundary_condition, &
           k1, k2, alphab, threshold_hw, Ktens,  &
           e_yieldcurve, e_plasticpot, coriolis, &
           ssh_stress, kridge, brlx, arlx,       &
           deltaminEVP, deltaminVP, capping,     &
-          elasticDamp, dyn_area_min, dyn_mass_min
+          elasticDamp, dyn_area_min, dyn_mass_min, &
+          coastal_drag, boundary_condition, create_form_factors, coastal_drag_stress_factor, Cs, u0
       use ice_dyn_vp, only: &
           maxits_nonlin, precond, dim_fgmres, dim_pgmres, maxits_fgmres, &
           maxits_pgmres, monitor_nonlin, monitor_fgmres, &
@@ -244,6 +247,7 @@
 
 
       namelist /dynamics_nml/ &
+        boundary_condition, coastal_drag, Cs, u0, create_form_factors,  &
         kdyn,           ndte,           revised_evp,    yield_curve,    &
         evp_algorithm,  elasticDamp,                                    &
         brlx,           arlx,           ssh_stress,                     &
@@ -406,65 +410,72 @@
 
       kitd = 1           ! type of itd conversions (0 = delta, 1 = linear)
       kcatbound = 1      ! category boundary formula (0 = old, 1 = new, etc)
-      kdyn = 1           ! type of dynamics (-1, 0 = off, 1 = evp, 2 = eap, 3 = vp)
-      ndtd = 1           ! dynamic time steps per thermodynamic time step
-      ndte = 120         ! subcycles per dynamics timestep:  ndte=dt_dyn/dte
-      evp_algorithm = 'standard_2d'  ! EVP kernel (standard_2d=standard cice evp; shared_mem_1d=1d shared memory and no mpi
-      elasticDamp = 0.36_dbl_kind    ! coefficient for calculating the parameter E
-      save_ghte_ghtn = .false.       ! if true, save global hte and htn (global ext.)
-      brlx   = 300.0_dbl_kind ! revised_evp values. Otherwise overwritten in ice_dyn_shared
-      arlx   = 300.0_dbl_kind ! revised_evp values. Otherwise overwritten in ice_dyn_shared
-      revised_evp = .false.   ! if true, use revised procedure for evp dynamics
-      yield_curve = 'ellipse' ! yield curve
-      kstrength = 1           ! 1 = Rothrock 75 strength, 0 = Hibler 79
-      Pstar = 2.75e4_dbl_kind ! constant in Hibler strength formula (kstrength = 0)
-      Cstar = 20._dbl_kind    ! constant in Hibler strength formula (kstrength = 0)
-      dyn_area_min = p001     ! minimum ice area concentration to activate dynamics
-      dyn_mass_min = p01      ! minimum ice mass to activate dynamics (kg/m^2)
-      krdg_partic = 1         ! 1 = new participation, 0 = Thorndike et al 75
-      krdg_redist = 1         ! 1 = new redistribution, 0 = Hibler 80
-      mu_rdg = 3              ! e-folding scale of ridged ice, krdg_partic=1 (m^0.5)
-      Cf = 17.0_dbl_kind      ! ratio of ridging work to PE change in ridging
-      ksno = 0.3_dbl_kind     ! snow thermal conductivity
-      dxrect = 0.0_dbl_kind   ! user defined grid spacing in cm in x direction
-      dyrect = 0.0_dbl_kind   ! user defined grid spacing in cm in y direction
-      lonrefrect = -156.50_dbl_kind  ! lower left corner lon for rectgrid
-      latrefrect =   71.35_dbl_kind  ! lower left corner lat for rectgrid
-      scale_dxdy = .false.    ! apply dxscale, dyscale to rectgrid
-      dxscale = 1.0_dbl_kind   ! user defined rectgrid x-grid scale factor (e.g., 1.02)
-      dyscale = 1.0_dbl_kind   ! user defined rectgrid y-grid scale factor (e.g., 1.02)
-      close_boundaries = .false.   ! true = set land on edges of grid
-      seabed_stress= .false.  ! if true, seabed stress for landfast is on
-      seabed_stress_method  = 'LKD'! LKD = Lemieux et al 2015, probabilistic = Dupont et al. 2022
-      k1 = 7.5_dbl_kind       ! 1st free parameter for landfast parameterization
-      k2 = 15.0_dbl_kind      ! 2nd free parameter (N/m^3) for landfast parametrization
-      alphab = 20.0_dbl_kind  ! alphab=Cb factor in Lemieux et al 2015
-      threshold_hw = 30.0_dbl_kind ! max water depth for grounding
-      Ktens = 0.0_dbl_kind    ! T=Ktens*P (tensile strength: see Konig and Holland, 2010)
-      e_yieldcurve = 2.0_dbl_kind  ! VP aspect ratio of elliptical yield curve
-      e_plasticpot = 2.0_dbl_kind  ! VP aspect ratio of elliptical plastic potential
-      visc_method = 'avg_zeta' ! calc viscosities at U point: avg_strength, avg_zeta
-      deltaminEVP = 1e-11_dbl_kind ! minimum delta for viscosities (EVP, Hunke 2001)
-      deltaminVP  = 2e-9_dbl_kind  ! minimum delta for viscosities (VP, Hibler 1979)
-      capping_method  = 'max'  ! method for capping of viscosities (max=Hibler 1979,sum=Kreyscher2000)
-      maxits_nonlin = 10       ! max nb of iteration for nonlinear solver
-      precond = 'pgmres'       ! preconditioner for fgmres: 'ident' (identity), 'diag' (diagonal),
-                               ! 'pgmres' (Jacobi-preconditioned GMRES)
-      dim_fgmres = 50          ! size of fgmres Krylov subspace
-      dim_pgmres = 5           ! size of pgmres Krylov subspace
-      maxits_fgmres = 50       ! max nb of iteration for fgmres
-      maxits_pgmres = 5        ! max nb of iteration for pgmres
-      monitor_nonlin = .false. ! print nonlinear residual norm
-      monitor_fgmres = .false. ! print fgmres residual norm
-      monitor_pgmres = .false. ! print pgmres residual norm
-      ortho_type = 'mgs'       ! orthogonalization procedure 'cgs' or 'mgs'
-      reltol_nonlin = 1e-8_dbl_kind ! nonlinear stopping criterion: reltol_nonlin*res(k=0)
-      reltol_fgmres = 1e-1_dbl_kind ! fgmres stopping criterion: reltol_fgmres*res(k)
-      reltol_pgmres = 1e-6_dbl_kind ! pgmres stopping criterion: reltol_pgmres*res(k)
-      algo_nonlin = 'picard'        ! nonlinear algorithm: 'picard' (Picard iteration), 'anderson' (Anderson acceleration)
-      fpfunc_andacc = 1        ! fixed point function for Anderson acceleration:
-                               ! 1: g(x) = FMGRES(A(x),b(x)), 2: g(x) = x - A(x)x + b(x)
-      dim_andacc = 5           ! size of Anderson minimization matrix (number of saved previous residuals)
+
+      ! DYNAMICS
+      boundary_condition    = 'no_slip'       ! 'no_slip' (Dirchlet) or 'free_slip' (Neumann); boundary conditions
+      coastal_drag          = .false.         ! if true, enable coastal drag parameterisation for landfast ice
+      Cs                    = 1.0e-4_dbl_kind ! see Liu et al. (2022) section 3.3
+      u0                    = 5.0e-4_dbl_kind ! see Lemieux et al. (2015) section 6
+      create_form_factors   = .false.         ! creates form factors for box grid (test case)
+      kdyn                  = 1               ! type of dynamics (-1, 0 = off, 1 = evp, 2 = eap, 3 = vp)
+      ndtd                  = 1               ! dynamic time steps per thermodynamic time step
+      ndte                  = 120             ! subcycles per dynamics timestep:  ndte=dt_dyn/dte
+      evp_algorithm         = 'standard_2d'   ! EVP kernel (standard_2d=standard cice evp; shared_mem_1d=1d shared memory and no mpi
+      elasticDamp           = 0.36_dbl_kind   ! coefficient for calculating the parameter E
+      save_ghte_ghtn        = .false.         ! if true, save global hte and htn (global ext.)
+      brlx                  = 300.0_dbl_kind  ! revised_evp values. Otherwise overwritten in ice_dyn_shared
+      arlx                  = 300.0_dbl_kind  ! revised_evp values. Otherwise overwritten in ice_dyn_shared
+      revised_evp           = .false.         ! if true, use revised procedure for evp dynamics
+      yield_curve           = 'ellipse'       ! yield curve
+      kstrength             = 1               ! 1 = Rothrock 75 strength, 0 = Hibler 79
+      Pstar                 = 2.75e4_dbl_kind ! constant in Hibler strength formula (kstrength = 0)
+      Cstar                 = 20._dbl_kind    ! constant in Hibler strength formula (kstrength = 0)
+      dyn_area_min          = p001            ! minimum ice area concentration to activate dynamics
+      dyn_mass_min          = p01             ! minimum ice mass to activate dynamics (kg/m^2)
+      krdg_partic           = 1               ! 1 = new participation, 0 = Thorndike et al 75
+      krdg_redist           = 1               ! 1 = new redistribution, 0 = Hibler 80
+      mu_rdg                = 3               ! e-folding scale of ridged ice, krdg_partic=1 (m^0.5)
+      Cf                    = 17.0_dbl_kind   ! ratio of ridging work to PE change in ridging
+      ksno                  = 0.3_dbl_kind    ! snow thermal conductivity
+      dxrect                = 0.0_dbl_kind    ! user defined grid spacing in cm in x direction
+      dyrect                = 0.0_dbl_kind    ! user defined grid spacing in cm in y direction
+      lonrefrect            = -156.50_dbl_kind! lower left corner lon for rectgrid
+      latrefrect            =   71.35_dbl_kind! lower left corner lat for rectgrid
+      scale_dxdy            = .false.         ! apply dxscale, dyscale to rectgrid
+      dxscale               = 1.0_dbl_kind    ! user defined rectgrid x-grid scale factor (e.g., 1.02)
+      dyscale               = 1.0_dbl_kind    ! user defined rectgrid y-grid scale factor (e.g., 1.02)
+      close_boundaries      = .false.         ! true = set land on edges of grid
+      seabed_stress         = .false.         ! if true, seabed stress for landfast is on
+      seabed_stress_method  = 'LKD'           ! LKD = Lemieux et al 2015, probabilistic = Dupont et al. 2022
+      k1                    = 7.5_dbl_kind    ! 1st free parameter for landfast parameterization
+      k2                    = 15.0_dbl_kind   ! 2nd free parameter (N/m^3) for landfast parametrization
+      alphab                = 20.0_dbl_kind   ! alphab=Cb factor in Lemieux et al 2015
+      threshold_hw          = 30.0_dbl_kind   ! max water depth for grounding
+      Ktens                 = 0.0_dbl_kind    ! T=Ktens*P (tensile strength: see Konig and Holland, 2010)
+      e_yieldcurve          = 2.0_dbl_kind    ! VP aspect ratio of elliptical yield curve
+      e_plasticpot          = 2.0_dbl_kind    ! VP aspect ratio of elliptical plastic potential
+      visc_method           = 'avg_zeta'      ! calc viscosities at U point: avg_strength, avg_zeta
+      deltaminEVP           = 1e-11_dbl_kind  ! minimum delta for viscosities (EVP, Hunke 2001)
+      deltaminVP            = 2e-9_dbl_kind   ! minimum delta for viscosities (VP, Hibler 1979)
+      capping_method        = 'max'           ! method for capping of viscosities (max=Hibler 1979,sum=Kreyscher2000)
+      maxits_nonlin         = 10              ! max nb of iteration for nonlinear solver
+      precond               = 'pgmres'        ! preconditioner for fgmres: 'ident' (identity), 'diag' (diagonal),
+                                              ! 'pgmres' (Jacobi-preconditioned GMRES)
+      dim_fgmres            = 50              ! size of fgmres Krylov subspace
+      dim_pgmres            = 5               ! size of pgmres Krylov subspace
+      maxits_fgmres         = 50              ! max nb of iteration for fgmres
+      maxits_pgmres         = 5               ! max nb of iteration for pgmres
+      monitor_nonlin        = .false.         ! print nonlinear residual norm
+      monitor_fgmres        = .false.         ! print fgmres residual norm
+      monitor_pgmres        = .false.         ! print pgmres residual norm
+      ortho_type            = 'mgs'           ! orthogonalization procedure 'cgs' or 'mgs'
+      reltol_nonlin         = 1e-8_dbl_kind   ! nonlinear stopping criterion: reltol_nonlin*res(k=0)
+      reltol_fgmres         = 1e-1_dbl_kind   ! fgmres stopping criterion: reltol_fgmres*res(k)
+      reltol_pgmres         = 1e-6_dbl_kind   ! pgmres stopping criterion: reltol_pgmres*res(k)
+      algo_nonlin           = 'picard'        ! nonlinear algorithm: 'picard' (Picard iteration), 'anderson' (Anderson acceleration)
+      fpfunc_andacc         = 1               ! fixed point function for Anderson acceleration:
+                                              ! 1: g(x) = FMGRES(A(x),b(x)), 2: g(x) = x - A(x)x + b(x)
+      dim_andacc            = 5               ! size of Anderson minimization matrix (number of saved previous residuals)
       reltol_andacc = 1e-6_dbl_kind  ! relative tolerance for Anderson acceleration
       damping_andacc = 0       ! damping factor for Anderson acceleration
       start_andacc = 0         ! acceleration delay factor (acceleration starts at this iteration)
@@ -1018,6 +1029,14 @@
       call broadcast_scalar(kmt_file,             master_task)
       call broadcast_scalar(kitd,                 master_task)
       call broadcast_scalar(kcatbound,            master_task)
+      call broadcast_scalar(boundary_condition,   master_task)
+      call broadcast_scalar(coastal_drag,         master_task)
+      call broadcast_scalar(Cs,                   master_task)
+      call broadcast_scalar(u0,                   master_task)
+      call broadcast_scalar(create_form_factors,  master_task)
+      if (coastal_drag .and. create_form_factors) then
+         write(nu_diag,'(a)') ' Using coastal form factor builder to construct F2E/F2N'
+      endif
       call broadcast_scalar(kdyn,                 master_task)
       call broadcast_scalar(ndtd,                 master_task)
       call broadcast_scalar(ndte,                 master_task)
@@ -1456,6 +1475,13 @@
       endif
 
       if (grid_ice == 'C' .or. grid_ice == 'CD') then
+         if (boundary_condition /= 'no_slip' .and. boundary_condition /= 'free_slip') then
+            if (my_task == master_task) then
+               write(nu_diag,*) subname//' ERROR: invalid HORIZONTAL boundary condition/scheme'
+               write(nu_diag,*) subname//' ERROR: boundary_condition should be either no_slip or free_slip'
+            endif
+            abort_list = trim(abort_list)//":44"
+         endif
          if (kdyn > 1 .or. (kdyn == 1 .and. evp_algorithm /= 'standard_2d')) then
             if (my_task == master_task) then
               write(nu_diag,*) subname//' ERROR: grid_ice = C | CD only supported with kdyn=1 and evp_algorithm=standard_2d'
@@ -2064,6 +2090,9 @@
          write(nu_diag,1003) ' dyn_mass_min     = ', dyn_mass_min,' : min ice mass to activate dynamics (kg/m2)'
          if (kdyn >= 1) then
             if (kdyn == 1 .or. kdyn == 2) then
+               if (grid_ice == 'C' .or. grid_ice == 'CD') then
+                  write(nu_diag,1030) ' boundary_condition = ', trim(boundary_condition),' : horizontal boundary condition'
+               endif
                if (revised_evp) then
                   tmpstr2 = ' : revised EVP formulation used'
                   write(nu_diag,1002) ' arlx             = ', arlx, ' : stress equation factor alpha'

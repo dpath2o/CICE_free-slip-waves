@@ -68,7 +68,6 @@
           histfreq_n, nstreams
       use ice_domain_size, only: max_blocks, max_nstrm, nilyr, nslyr, nblyr, ncat, nfsd
       use ice_dyn_shared, only: kdyn
-      use ice_dyn_evp, only: uvelE, vvelE, uvelN, vvelN, shearU
       use ice_flux, only: mlt_onset, frz_onset, albcnt, snwcnt
       use ice_grid, only: grid_ice, grid_outfile, &
           grid_atm_thrm, grid_atm_dynu, grid_atm_dynv, &
@@ -455,15 +454,6 @@
          f_taubyN = f_tauby
          f_taubxE = f_taubx
          f_taubyE = f_tauby
-         ! dpath2o
-        !  f_KuxN   = f_Kux
-        !  f_KuyN   = f_Kuy
-        !  f_KuxE   = f_Kux
-        !  f_KuyE   = f_Kuy
-         f_shearU = f_shearU
-        !  f_F2E    = f_uvel
-        !  f_F2N    = f_uvel
-
       endif
 
       call broadcast_scalar (f_tlon, master_task)
@@ -702,18 +692,6 @@
       call broadcast_scalar (f_sistreave, master_task)
       call broadcast_scalar (f_sistremax, master_task)
       call broadcast_scalar (f_sirdgthick, master_task)
-      ! dpath2o
-    !   call broadcast_scalar (f_KuxN, master_task)
-    !   call broadcast_scalar (f_KuyN, master_task)
-    !   call broadcast_scalar (f_KuxE, master_task)
-    !   call broadcast_scalar (f_KuyE, master_task)
-    !   call broadcast_scalar (f_F2N, master_task)
-    !   call broadcast_scalar (f_F2E, master_task)
-      call broadcast_scalar (f_shearU, master_task)
-      call broadcast_scalar (f_uvelN, master_task)
-      call broadcast_scalar (f_vvelN, master_task)
-      call broadcast_scalar (f_uvelE, master_task)
-      call broadcast_scalar (f_vvelE, master_task)
 
       call broadcast_scalar (f_aicen, master_task)
       call broadcast_scalar (f_vicen, master_task)
@@ -1346,39 +1324,6 @@
              "seabed (basal) stress (y)",                                &
              "positive is y direction on E grid", c1, c0,                &
              ns1, f_taubyE)
-
-        !-----------------------------
-        ! dpath2o: coastal drag stress
-        ! call define_hist_field(n_KuxN,"KuxN","N/m^2",nstr2D, ncstr, &
-        !     "coastal (lateral) drag stress (x)", &
-        !     "positive is x direction on N grid", c1, c0, ns1, f_KuxN)
-
-        ! call define_hist_field(n_KuyN,"KuyN","N/m^2",nstr2D, ncstr, &
-        !     "coastal (lateral) drag stress (y)", &
-        !     "positive is y direction on N grid", c1, c0, ns1, f_KuyN)
-
-        ! call define_hist_field(n_KuxE,"KuxE","N/m^2",estr2D, ecstr, &
-        !     "coastal (lateral) drag stress (x)", &
-        !     "positive is x direction on E grid", c1, c0, ns1, f_KuxE)
-
-        ! call define_hist_field(n_KuyE,"KuyE","N/m^2",estr2D, ecstr, &
-        !     "coastal (lateral) drag stress (y)", &
-        !     "positive is y direction on E grid", c1, c0, ns1, f_KuyE)
-
-        ! call define_hist_field(n_F2N, "F2N", "-", nstr2D, ncstr, &
-        !     "coastal drag form factor (unitless)", &
-        !     "static; N-face on C-grid", c1, c0, ns1, f_F2N)
-
-        ! call define_hist_field(n_F2E, "F2E", "-", estr2D, ecstr, &
-        !     "coastal drag form factor (unitless)", &
-        !     "static; E-face on C-grid", c1, c0, ns1, f_F2E)
-
-         call define_hist_field(n_shearU,"shearU","%/day",ustr2D, ucstr, &
-             "strain rate (shear) at U-points",                         &
-             "shear is instantaneous, on U-grid", secday*c100, c0,      &
-             ns1, f_shearU)
-        ! dpath2o
-        !-----------------------------
 
          call define_hist_field(n_strength,"strength","N/m",tstr2D, tcstr, &
              "compressive ice strength",                                 &
@@ -2211,7 +2156,7 @@
       use ice_blocks, only: block, get_block, nx_block, ny_block
       use ice_domain, only: blocks_ice, nblocks
       use ice_domain_size, only: nfsd
-      use ice_grid, only: tmask, lmask_n, lmask_s, dxU, dyU, grid_ice!, & !dpath2o: F2E, F2N
+      use ice_grid, only: tmask, lmask_n, lmask_s, dxU, dyU, grid_ice
       use ice_calendar, only: new_year, write_history, &
                               write_ic, timesecs, histfreq, nstreams, mmonth, &
                               new_month
@@ -2237,22 +2182,21 @@
           stressp_2, stressp_3, stressp_4, sig1, sig2, sigP, &
           mlt_onset, frz_onset, dagedtt, dagedtd, fswint_ai, keffn_top, &
           snowfrac, alvdr_ai, alvdf_ai, alidr_ai, alidf_ai, update_ocn_f, &
-          cpl_frazil!, &
-          ! dpath2o
-          ! KuxN, KuyN, KuxE, KuyE
-      use ice_arrays_column, only   : snowfracn, Cdn_atm
-      use ice_history_shared        ! almost everything
-      use ice_history_write, only   : ice_write_hist
-      use ice_history_bgc, only     : accum_hist_bgc
-      use ice_history_mechred, only : accum_hist_mechred
-      use ice_history_pond, only    : accum_hist_pond
-      use ice_history_snow, only    : accum_hist_snow, f_rhos_cmp, f_rhos_cnt, n_rhos_cmp, n_rhos_cnt
-      use ice_history_drag, only    : accum_hist_drag
-      use icepack_intfc, only       : icepack_mushy_density_brine, icepack_mushy_liquid_fraction
-      use icepack_intfc, only       : icepack_mushy_temperature_mush
-      use ice_history_fsd, only     : accum_hist_fsd
-      use ice_state                 ! almost everything
-      use ice_timers, only          : ice_timer_start, ice_timer_stop, timer_readwrite
+          cpl_frazil
+      use ice_arrays_column, only: snowfracn, Cdn_atm
+      use ice_history_shared ! almost everything
+      use ice_history_write, only: ice_write_hist
+      use ice_history_bgc, only: accum_hist_bgc
+      use ice_history_mechred, only: accum_hist_mechred
+      use ice_history_pond, only: accum_hist_pond
+      use ice_history_snow, only: accum_hist_snow, &
+          f_rhos_cmp, f_rhos_cnt, n_rhos_cmp, n_rhos_cnt
+      use ice_history_drag, only: accum_hist_drag
+      use icepack_intfc, only: icepack_mushy_density_brine, icepack_mushy_liquid_fraction
+      use icepack_intfc, only: icepack_mushy_temperature_mush
+      use ice_history_fsd, only: accum_hist_fsd
+      use ice_state ! almost everything
+      use ice_timers, only: ice_timer_start, ice_timer_stop, timer_readwrite
 
       real (kind=dbl_kind), intent(in) :: &
          dt      ! time step
@@ -2723,22 +2667,6 @@
              call accum_hist_field(n_taubxE, iblk, taubxE(:,:,iblk), a2D)
          if (f_taubyE(1:1) /= 'x') &
              call accum_hist_field(n_taubyE, iblk, taubyE(:,:,iblk), a2D)
-         !--------------------------------
-         ! dpath2o: coastal drag stress (faces)
-        !  if (f_KuxN(1:1) /= 'x') &
-        !      call accum_hist_field(n_KuxN, iblk, KuxN(:,:,iblk), a2D)
-        !  if (f_KuyN(1:1) /= 'x') &
-        !      call accum_hist_field(n_KuyN, iblk, KuyN(:,:,iblk), a2D)
-        !  if (f_KuxE(1:1) /= 'x') &
-        !      call accum_hist_field(n_KuxE, iblk, KuxE(:,:,iblk), a2D)
-        !  if (f_KuyE(1:1) /= 'x') &
-        !      call accum_hist_field(n_KuyE, iblk, KuyE(:,:,iblk), a2D)
-        !  if (f_F2N(1:1) /= 'x') &
-        !      call accum_hist_field(n_F2N, iblk, F2N(:,:,iblk), a2D)
-        !  if (f_F2E(1:1) /= 'x') &
-        !      call accum_hist_field(n_F2E, iblk, F2E(:,:,iblk), a2D)
-        ! dpath2o
-        !------------------------------
          if (f_strength(1:1)/= 'x') &
              call accum_hist_field(n_strength,iblk, strength(:,:,iblk), a2D)
 
@@ -2758,10 +2686,6 @@
 !             call accum_hist_field(n_sig2,    iblk, sig2(:,:,iblk), a2D)
 !        if (f_trsig  (1:1) /= 'x') &
 !             call accum_hist_field(n_trsig,   iblk, trsig(:,:,iblk), a2D)
-
-        ! dpath2o
-        if (f_shearU (1:1) /= 'x') &
-            call accum_hist_field(n_shearU,   iblk, shearU(:,:,iblk), a2D)
 
          if (f_dvidtt (1:1) /= 'x') &
              call accum_hist_field(n_dvidtt,  iblk, dvidtt(:,:,iblk), a2D)
@@ -4106,8 +4030,6 @@
               if (.not. tmask(i,j,iblk)) then ! mask out land points
                  if (n_divu     (ns) /= 0) a2D(i,j,n_divu(ns),     iblk) = spval_dbl
                  if (n_shear    (ns) /= 0) a2D(i,j,n_shear(ns),    iblk) = spval_dbl
-                 ! dpath2o
-                 if (n_shearU    (ns) /= 0) a2D(i,j,n_shearU(ns),    iblk) = spval_dbl
                  if (n_vort     (ns) /= 0) a2D(i,j,n_vort(ns),     iblk) = spval_dbl
                  if (n_sig1     (ns) /= 0) a2D(i,j,n_sig1(ns),     iblk) = spval_dbl
                  if (n_sig2     (ns) /= 0) a2D(i,j,n_sig2(ns),     iblk) = spval_dbl
@@ -4138,9 +4060,6 @@
                        divu (i,j,iblk)*avail_hist_fields(n_divu(ns))%cona
                  if (n_shear    (ns) /= 0) a2D(i,j,n_shear(ns),iblk)     = &
                        shear(i,j,iblk)*avail_hist_fields(n_shear(ns))%cona
-                 ! dpath2o
-                 if (n_shearU   (ns) /= 0) a2D(i,j,n_shearU(ns),iblk)     = &
-                       shearU(i,j,iblk)*avail_hist_fields(n_shearU(ns))%cona
                  if (n_vort     (ns) /= 0) a2D(i,j,n_vort(ns),iblk)      = &
                        vort(i,j,iblk)*avail_hist_fields(n_vort(ns))%cona
                  if (n_sig1     (ns) /= 0) a2D(i,j,n_sig1(ns),iblk)      = &

@@ -47,11 +47,13 @@
           ndte, yield_curve, ecci, denom1, arlx1i, fcor_blk, fcorE_blk, fcorN_blk, &
           uvel_init, vvel_init, uvelE_init, vvelE_init, uvelN_init, vvelN_init, &
           seabed_stress_factor_LKD, seabed_stress_factor_prob, seabed_stress_method, &
-          seabed_stress, Ktens, revp
+          seabed_stress, Ktens, revp, &
+          coastal_drag, boundary_condition, create_form_factors, coastal_drag_stress_factor, Cs, u0
       use ice_fileunits, only: nu_diag
       use ice_exit, only: abort_ice
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
       use icepack_intfc, only: icepack_ice_strength, icepack_query_parameters
+      use ice_grid, only: F2E, F2N, build_F2_form_factors_box_grid
 
       implicit none
       private
@@ -94,7 +96,7 @@
          strengthU(:,:,:) , & ! strength averaged to U points
          divergU  (:,:,:) , & ! div array on U points, differentiate from divu
          tensionU (:,:,:) , & ! tension array on U points
-         !shearU   (:,:,:) , & ! shear array on U points
+         shearU   (:,:,:) , & ! shear array on U points
          deltaU   (:,:,:) , & ! delta array on U points
          zetax2T  (:,:,:) , & ! zetax2 = 2*zeta (bulk viscosity)
          zetax2U  (:,:,:) , & ! zetax2T averaged to U points
@@ -115,11 +117,6 @@
          umass    (:,:,:) , & ! total mass of ice and snow (u grid)
          umassdti (:,:,:)     ! mass of U-cell/dte (kg/m^2 s)
 
-      real(kind=dbl_kind), allocatable, public :: &
-         uvelE(:,:,:), vvelE(:,:,:), &   ! E-face velocities (C grid)
-         uvelN(:,:,:), vvelN(:,:,:), &   ! N-face velocities (C grid)
-         shearU(:,:,:)                   ! shear at U (NE corner)
-
       public :: evp, init_evp
 
 !=======================================================================
@@ -135,7 +132,8 @@
       use ice_domain, only: nblocks, blocks_ice
       use ice_grid, only: grid_ice, dyT, dxT, uarear, tmask, G_HTE, G_HTN, dxN, dyE
       use ice_calendar, only: dt_dyn
-      use ice_dyn_shared, only: init_dyn_shared, evp_algorithm
+      use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, &
+         iceEmask, iceNmask, coastal_drag, create_form_factors
       use ice_dyn_evp1d, only: dyn_evp1d_init
 
 !allocate c and cd grid var. Follow structucre of eap
@@ -152,6 +150,24 @@
 
 
       call init_dyn_shared(dt_dyn)
+
+      !------------------------------------------------
+      ! coastal drag masking 
+      if (coastal_drag .and. create_form_factors) then
+         do iblk = 1, nblocks
+            this_block = get_block(blocks_ice(iblk), iblk)
+            ilo = this_block%ilo
+            ihi = this_block%ihi
+            jlo = this_block%jlo
+            jhi = this_block%jhi
+            do j = jlo, jhi
+               do i = ilo, ihi
+                  iceEmask(i,j,iblk) = tmask(i,j,iblk) .or. tmask(i+1,j,iblk)
+                  iceNmask(i,j,iblk) = tmask(i,j,iblk) .or. tmask(i,j+1,iblk)
+               enddo
+            enddo
+         enddo
+      endif
 
       if (evp_algorithm == "shared_mem_1d" ) then
          call dyn_evp1d_init
@@ -224,17 +240,6 @@
                    stat=ierr)
          if (ierr/=0) call abort_ice(subname//' ERROR: Out of memory ratio')
 
-         if (.not. allocated(uvelE)) then
-            allocate(uvelE(nx_block,ny_block,nblocks), vvelE(nx_block,ny_block,nblocks), &
-                     uvelN(nx_block,ny_block,nblocks), vvelN(nx_block,ny_block,nblocks), &
-                     shearU(nx_block,ny_block,nblocks), &
-                     stat=ierr)
-            if (ierr/=0) call abort_ice(subname//' ERROR: Out of memory ratio')
-            uvelE = c0; vvelE = c0
-            uvelN = c0; vvelN = c0
-            shearU = c0
-         end if
-
          !$OMP PARALLEL DO PRIVATE(iblk,i,j,ilo,ihi,jlo,jhi,this_block)
          do iblk = 1, nblocks
             this_block = get_block(blocks_ice(iblk),iblk)
@@ -282,13 +287,13 @@
           strairxU, strairyU, uocn, vocn, ss_tltx, ss_tlty, fmU, &
           strtltxU, strtltyU, strocnxU, strocnyU, strintxU, strintyU, taubxU, taubyU, &
           strax, stray, &
-          TbU, hwater, &
+          TbU, KuxU, KuyU, KuU, hwater, &
           strairxN, strairyN, fmN, &
           strtltxN, strtltyN, strocnxN, strocnyN, strintxN, strintyN, taubxN, taubyN, &
-          TbN, &
+          TbN, KuxN, KuyN, KuN, &
           strairxE, strairyE, fmE, &
           strtltxE, strtltyE, strocnxE, strocnyE, strintxE, strintyE, taubxE, taubyE, &
-          TbE, &
+          TbE, KuxE, KuyE, KuE, &
           stressp_1, stressp_2, stressp_3, stressp_4, &
           stressm_1, stressm_2, stressm_3, stressm_4, &
           stress12_1, stress12_2, stress12_3, stress12_4, &
@@ -305,15 +310,19 @@
           ice_timer_start, ice_timer_stop, timer_evp
       use ice_dyn_shared, only: evp_algorithm, stack_fields, unstack_fields, &
           DminTarea, visc_method, deformations, deformationsC_T, deformationsCD_T, &
-          strain_rates_U, dxhy, dyhx, cxp, cyp, cxm, cym, &
+          strain_rates_U_no_slip, strain_rates_U_free_slip, dxhy, dyhx, cxp, cyp, cxm, cym, &
           iceTmask, iceUmask, iceEmask, iceNmask, &
-          dyn_haloUpdate, fld2, fld3, fld4, strain_rates_U_free_slip
+          dyn_haloUpdate, fld2, fld3, fld4
       use ice_dyn_evp1d, only: dyn_evp1d_run
 
       real (kind=dbl_kind), intent(in) :: &
          dt      ! time step
 
       ! local variables
+
+      logical(kind=log_kind) :: &
+         avg_zeta, & ! visc_method logical
+         noslip      ! boundary_condition logical
 
       integer (kind=int_kind) :: &
          ksub           , & ! subcycle step
@@ -502,6 +511,10 @@
          endif
       endif
 
+      ! attempt to be more efficient with logical inside ksub loop
+      avg_zeta = (visc_method == 'avg_zeta')
+      noslip   = (boundary_condition(1:7) == 'no_slip')
+
       if (trim(grid_ice) == 'B') then
          !$OMP PARALLEL DO PRIVATE(iblk,ilo,ihi,jlo,jhi,this_block,ij,i,j) SCHEDULE(runtime)
          do iblk = 1, nblocks
@@ -573,6 +586,14 @@
             jlo = this_block%jlo
             jhi = this_block%jhi
 
+            ! ! coastal drag parameterisation prepartion
+            ! do j = jlo, jhi
+            !    do i = ilo, ihi
+            !       emass(i,j,iblk) = 0.5d0 * ( tmass(i,j,iblk) + tmass(i+1,j  ,iblk) )
+            !       nmass(i,j,iblk) = 0.5d0 * ( tmass(i,j,iblk) + tmass(i  ,j+1,iblk) )
+            !    enddo
+            ! enddo
+
             call dyn_prep2 (nx_block,             ny_block,             &
                             ilo, ihi,             jlo, jhi,             &
                             icellT        (iblk), icellU        (iblk), &
@@ -600,7 +621,9 @@
                             stress12_3(:,:,iblk), stress12_4(:,:,iblk), &
                             uvel_init (:,:,iblk), vvel_init (:,:,iblk), &
                             uvel      (:,:,iblk), vvel      (:,:,iblk), &
-                            TbU       (:,:,iblk))
+                            TbU       (:,:,iblk),                       &
+                            KuxU      (:,:,iblk), KuyU      (:,:,iblk), &
+                            KuU       (:,:,iblk))
 
             !-----------------------------------------------------------------
             ! ice strength
@@ -650,7 +673,9 @@
                             stress12_3(:,:,iblk), stress12_4(:,:,iblk), &
                             uvelN_init(:,:,iblk), vvelN_init(:,:,iblk), &
                             uvelN     (:,:,iblk), vvelN     (:,:,iblk), &
-                            TbN       (:,:,iblk))
+                            TbN       (:,:,iblk),                       &
+                            KuxN      (:,:,iblk), KuyN      (:,:,iblk), &
+                            KuN       (:,:,iblk))
 
             !-----------------------------------------------------------------
             ! more preparation for dynamics on E grid
@@ -683,7 +708,9 @@
                             stress12_3(:,:,iblk), stress12_4(:,:,iblk), &
                             uvelE_init(:,:,iblk), vvelE_init(:,:,iblk), &
                             uvelE     (:,:,iblk), vvelE     (:,:,iblk), &
-                            TbE       (:,:,iblk))
+                            TbE       (:,:,iblk),                       &
+                            KuxE      (:,:,iblk), KuyE      (:,:,iblk), &
+                            KuE       (:,:,iblk))
 
 
             do i=1,nx_block
@@ -780,6 +807,30 @@
                               field_loc_center, field_type_scalar)
          call ice_timer_stop(timer_bound)
          call ice_HaloMask(halo_info_mask, halo_info, halomask)
+      endif
+
+      !-----------------------------------------------------------------
+      ! coastal drag function KuE/N
+      !-----------------------------------------------------------------
+      if (coastal_drag) then
+         if (grid_ice == "C") then
+            !$OMP PARALLEL DO PRIVATE(iblk) SCHEDULE(runtime)
+            do iblk = 1, nblocks
+               call coastal_drag_stress_factor(nx_block          , ny_block,         &
+                                               icellE  (iblk)    ,                   &
+                                               indxEi  (:,iblk)  , indxEj(:,iblk),   &
+                                               emass   (:,:,iblk),                   &
+                                               KuE     (:,:,iblk),                   &
+                                               F2E(:,:,iblk)                         )
+               call coastal_drag_stress_factor(nx_block          , ny_block,         &
+                                               icellN  (iblk)    ,                   &
+                                               indxNi  (:,iblk)  , indxNj(:,iblk),   &
+                                               nmass   (:,:,iblk),                   &
+                                               KuN     (:,:,iblk),                   &
+                                               F2N(:,:,iblk)                         )
+            enddo
+            !$OMP END PARALLEL DO
+         endif
       endif
 
       !-----------------------------------------------------------------
@@ -951,40 +1002,41 @@
 
             !$OMP PARALLEL DO PRIVATE(iblk)
             do iblk = 1, nblocks
-
             !-----------------------------------------------------------------
             ! strain rates at U point
             ! NOTE these are actually strain rates * area  (m^2/s)
             !-----------------------------------------------------------------
-               ! call strain_rates_U_free_slip (nx_block          , ny_block           , &
-               !                      icellU      (iblk),                      &
-               !                      indxUi    (:,iblk), indxUj     (:,iblk), &
-               !                      uvelE   (:,:,iblk), vvelE    (:,:,iblk), &
-               !                      uvelN   (:,:,iblk), vvelN    (:,:,iblk), &
-               !                      uvel    (:,:,iblk), vvel     (:,:,iblk), &
-               !                      dxE     (:,:,iblk), dyN      (:,:,iblk), &
-               !                      dxU     (:,:,iblk), dyU      (:,:,iblk), &
-               !                      ratiodxN(:,:,iblk), ratiodxNr(:,:,iblk), &
-               !                      ratiodyE(:,:,iblk), ratiodyEr(:,:,iblk), &
-               !                      epm     (:,:,iblk), npm      (:,:,iblk), &
-               !                      divergU (:,:,iblk), tensionU (:,:,iblk), &
-               !                      shearU  (:,:,iblk), deltaU   (:,:,iblk), &
-               !                      ksub              , ndte                 )
-               call strain_rates_U (nx_block          , ny_block           , &
-                                    icellU      (iblk),                      &
-                                    indxUi    (:,iblk), indxUj     (:,iblk), &
-                                    uvelE   (:,:,iblk), vvelE    (:,:,iblk), &
-                                    uvelN   (:,:,iblk), vvelN    (:,:,iblk), &
-                                    uvel    (:,:,iblk), vvel     (:,:,iblk), &
-                                    dxE     (:,:,iblk), dyN      (:,:,iblk), &
-                                    dxU     (:,:,iblk), dyU      (:,:,iblk), &
-                                    ratiodxN(:,:,iblk), ratiodxNr(:,:,iblk), &
-                                    ratiodyE(:,:,iblk), ratiodyEr(:,:,iblk), &
-                                    epm     (:,:,iblk), npm      (:,:,iblk), &
-                                    divergU (:,:,iblk), tensionU (:,:,iblk), &
-                                    shearU  (:,:,iblk), deltaU   (:,:,iblk), &
-                                    ksub              , ndte                 )
-
+               if (noslip) then
+                  call strain_rates_U_no_slip (nx_block          , ny_block           , &
+                                               icellU      (iblk),                      &
+                                               indxUi    (:,iblk), indxUj     (:,iblk), &
+                                               uvelE   (:,:,iblk), vvelE    (:,:,iblk), &
+                                               uvelN   (:,:,iblk), vvelN    (:,:,iblk), &
+                                               uvel    (:,:,iblk), vvel     (:,:,iblk), &
+                                               dxE     (:,:,iblk), dyN      (:,:,iblk), &
+                                               dxU     (:,:,iblk), dyU      (:,:,iblk), &
+                                               ratiodxN(:,:,iblk), ratiodxNr(:,:,iblk), &
+                                               ratiodyE(:,:,iblk), ratiodyEr(:,:,iblk), &
+                                               epm     (:,:,iblk), npm      (:,:,iblk), &
+                                               divergU (:,:,iblk), tensionU (:,:,iblk), &
+                                               shearU  (:,:,iblk), deltaU   (:,:,iblk), &
+                                               ksub              , ndte                 )
+               else
+                  call strain_rates_U_free_slip (nx_block          , ny_block           , &
+                                                 icellU      (iblk),                      &
+                                                 indxUi    (:,iblk), indxUj     (:,iblk), &
+                                                 uvelE   (:,:,iblk), vvelE    (:,:,iblk), &
+                                                 uvelN   (:,:,iblk), vvelN    (:,:,iblk), &
+                                                 uvel    (:,:,iblk), vvel     (:,:,iblk), &
+                                                 dxE     (:,:,iblk), dyN      (:,:,iblk), &
+                                                 dxU     (:,:,iblk), dyU      (:,:,iblk), &
+                                                 ratiodxN(:,:,iblk), ratiodxNr(:,:,iblk), &
+                                                 ratiodyE(:,:,iblk), ratiodyEr(:,:,iblk), &
+                                                 epm     (:,:,iblk), npm      (:,:,iblk), &
+                                                 divergU (:,:,iblk), tensionU (:,:,iblk), &
+                                                 shearU  (:,:,iblk), deltaU   (:,:,iblk), &
+                                                 ksub              , ndte                 )
+               end if
             enddo  ! iblk
             !$OMP END PARALLEL DO
 
@@ -1016,10 +1068,10 @@
                                  field_loc_center, field_type_scalar, &
                                  zetax2T, etax2T, stresspT, stressmT)
 
-            if (visc_method == 'avg_strength') then
-               call grid_average_X2Y('S', strength, 'T', strengthU, 'U')
-            elseif (visc_method == 'avg_zeta') then
+            if (avg_zeta) then
                call grid_average_X2Y('S', etax2T  , 'T', etax2U   , 'U')
+            else
+               call grid_average_X2Y('S', strength, 'T', strengthU, 'U')
             endif
 
             !$OMP PARALLEL DO PRIVATE(iblk)
@@ -1076,7 +1128,8 @@
                               strintxE  (:,:,iblk), taubxE    (:,:,iblk), &
                               uvelE_init(:,:,iblk),                       &
                               uvelE     (:,:,iblk), vvelE     (:,:,iblk), &
-                                 TbE       (:,:,iblk))
+                              TbE       (:,:,iblk),                       &
+                              KuxE      (:,:,iblk), KuE       (:,:,iblk))
 
                 call stepv_C (nx_block,             ny_block,             & ! v, N point
                               icellN        (iblk), Cdn_ocnN  (:,:,iblk), &
@@ -1088,7 +1141,38 @@
                               strintyN  (:,:,iblk), taubyN    (:,:,iblk), &
                               vvelN_init(:,:,iblk),                       &
                               uvelN     (:,:,iblk), vvelN     (:,:,iblk), &
-                              TbN       (:,:,iblk))
+                              TbN       (:,:,iblk),                       &
+                              KuxN      (:,:,iblk), KuN       (:,:,iblk))
+
+               if (ksub == ndte) then
+                  do j = 1, ny_block
+                     do i = 1, nx_block-1
+                        if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
+                           if ( (epm(i  ,j  , iblk) == c0) .or. (epm(i  ,j-1, iblk) == c0) .or. &
+                                (npm(i  ,j  , iblk) == c0) .or. (npm(i-1,j  , iblk) == c0) ) then
+                              !$OMP CRITICAL (IO_DIAG)
+                              write(nu_diag,'(a,3i6,1p,2e16.8)') 'E-coast AFTER step (blk,i,j): uE, vE =', &
+                              iblk, i, j, uvelE(i,j,iblk), vvelE(i,j,iblk)
+                              !$OMP END CRITICAL (IO_DIAG)
+                           end if
+                        end if
+                     end do
+                  end do
+                  do j = 1, ny_block-1
+                     do i = 1, nx_block
+                        if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
+                           if ( (epm(i  ,j  , iblk) == c0) .or. (epm(i  ,j-1, iblk) == c0) .or. &
+                                (npm(i  ,j  , iblk) == c0) .or. (npm(i-1,j  , iblk) == c0) ) then
+                              !$OMP CRITICAL (IO_DIAG)
+                              write(nu_diag,'(a,3i6,1p,2e16.8)') 'N-coast AFTER step (blk,i,j): vN, uN =', &
+                              iblk, i, j, vvelN(i,j,iblk), uvelN(i,j,iblk)
+                              !$OMP END CRITICAL (IO_DIAG)
+                           end if
+                        end if
+                     end do
+                  end do
+                  call flush(nu_diag)
+               end if
             enddo
             !$OMP END PARALLEL DO
 
@@ -1104,6 +1188,43 @@
             call grid_average_X2Y('A', vvelN, 'N', vvelE, 'E')
             uvelN(:,:,:) = uvelN(:,:,:)*npm(:,:,:)
             vvelE(:,:,:) = vvelE(:,:,:)*epm(:,:,:)
+
+            ! -- DIAG 2: after E<->N reconstruction (last subcycle only) --
+            if (ksub == ndte) then
+               !$OMP PARALLEL DO PRIVATE(iblk,i,j)
+               do iblk = 1, nblocks
+                  ! E faces: normal=uvelE, tangential=vvelE
+                  do j = 1, ny_block
+                     do i = 1, nx_block-1
+                        if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
+                           if ( (epm(i  ,j  , iblk) == c0) .or. (epm(i  ,j-1, iblk) == c0) .or. &
+                                (npm(i  ,j  , iblk) == c0) .or. (npm(i-1,j  , iblk) == c0) ) then
+                              !$OMP CRITICAL (IO_DIAG)
+                              write(nu_diag,'(a,3i6,1p,2e16.8)') 'E-coast AFTER recon (blk,i,j): uE, vE =', &
+                              iblk, i, j, uvelE(i,j,iblk), vvelE(i,j,iblk)
+                              !$OMP END CRITICAL (IO_DIAG)
+                           end if
+                        end if
+                     end do
+                  end do
+                  ! N faces: normal=vvelN, tangential=uvelN
+                  do j = 1, ny_block-1
+                     do i = 1, nx_block
+                        if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
+                           if ( (epm(i  ,j  , iblk) == c0) .or. (epm(i  ,j-1, iblk) == c0) .or. &
+                                (npm(i  ,j  , iblk) == c0) .or. (npm(i-1,j  , iblk) == c0) ) then
+                              !$OMP CRITICAL (IO_DIAG)
+                              write(nu_diag,'(a,3i6,1p,2e16.8)') 'N-coast AFTER recon (blk,i,j): vN, uN =', &
+                              iblk, i, j, vvelN(i,j,iblk), uvelN(i,j,iblk)
+                              !$OMP END CRITICAL (IO_DIAG)
+                           end if
+                        end if
+                     end do
+                  end do
+               end do
+               !$OMP END PARALLEL DO
+               call flush(nu_diag)
+            end if
 
             ! calls ice_haloUpdate, controls bundles and masks
             call dyn_haloUpdate (halo_info,       halo_info_mask,    &
@@ -1186,19 +1307,20 @@
             ! strain rates at U point
             ! NOTE these are actually strain rates * area  (m^2/s)
             !-----------------------------------------------------------------
-               call strain_rates_U (nx_block           , ny_block           , &
-                                                         icellU       (iblk), &
-                                    indxUi     (:,iblk), indxUj     (:,iblk), &
-                                    uvelE    (:,:,iblk), vvelE    (:,:,iblk), &
-                                    uvelN    (:,:,iblk), vvelN    (:,:,iblk), &
-                                    uvel     (:,:,iblk), vvel     (:,:,iblk), &
-                                    dxE      (:,:,iblk), dyN      (:,:,iblk), &
-                                    dxU      (:,:,iblk), dyU      (:,:,iblk), &
-                                    ratiodxN (:,:,iblk), ratiodxNr(:,:,iblk), &
-                                    ratiodyE (:,:,iblk), ratiodyEr(:,:,iblk), &
-                                    epm      (:,:,iblk), npm      (:,:,iblk), &
-                                    divergU  (:,:,iblk), tensionU (:,:,iblk), &
-                                    shearU   (:,:,iblk), DeltaU   (:,:,iblk)  )
+               call strain_rates_U_no_slip (nx_block           , ny_block           , &
+                                                                  icellU       (iblk), &
+                                             indxUi     (:,iblk), indxUj     (:,iblk), &
+                                             uvelE    (:,:,iblk), vvelE    (:,:,iblk), &
+                                             uvelN    (:,:,iblk), vvelN    (:,:,iblk), &
+                                             uvel     (:,:,iblk), vvel     (:,:,iblk), &
+                                             dxE      (:,:,iblk), dyN      (:,:,iblk), &
+                                             dxU      (:,:,iblk), dyU      (:,:,iblk), &
+                                             ratiodxN (:,:,iblk), ratiodxNr(:,:,iblk), &
+                                             ratiodyE (:,:,iblk), ratiodyEr(:,:,iblk), &
+                                             epm      (:,:,iblk), npm      (:,:,iblk), &
+                                             divergU  (:,:,iblk), tensionU (:,:,iblk), &
+                                             shearU   (:,:,iblk), DeltaU   (:,:,iblk), &
+                                             ksub               , ndte  )
 
                call stressCD_U     (nx_block           , ny_block           , &
                                                          icellU       (iblk), &
