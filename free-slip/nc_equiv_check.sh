@@ -27,6 +27,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# first check bitwise
+cmp -s "$A_IN" "$B_IN" && echo "BITWISE IDENTICAL" || echo "bytes differ"
+
+# perform MDF5 sum
+ md5sum "$A_IN" "$B_IN"
+
 need() { command -v "$1" >/dev/null 2>&1 || { echo "ERROR: need $1"; exit 1; }; }
 for exe in ncks ncdiff ncap2 ncwa ncatted ncrename; do need "$exe"; done
 
@@ -46,8 +52,8 @@ cp -f "$B_IN" "$B_TMP"
 ncatted -O -a history,global,d,, "$A_TMP" || true
 ncatted -O -a history,global,d,, "$B_TMP" || true
 
-# Normalize to classic, no compression; fix record dim if present
-normalize() {
+# Normalise to classic, no compression; fix record dim if present
+normalise() {
   local IN="$1" OUT="$2"
   if ncks -O -3 -L 0 --fix_rec_dmn time "$IN" "$OUT" 2>/dev/null; then
     :
@@ -55,8 +61,11 @@ normalize() {
     ncks -O -3 -L 0 "$IN" "$OUT"
   fi
 }
-normalize "$A_TMP" "$A_STD"
-normalize "$B_TMP" "$B_STD"
+normalise "$A_TMP" "$A_STD"
+normalise "$B_TMP" "$B_STD"
+
+# bitwise after NC normalisation 
+cmp -s "$A_STD" "$B_STD" && echo "IDENTICAL AFTER NORMALISE" || echo "still different"
 
 echo "=== Header diff (metadata/dims/vars) ==="
 diff -u <(ncks -m "$A_STD") <(ncks -m "$B_STD") || true
