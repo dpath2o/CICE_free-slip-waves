@@ -1154,7 +1154,7 @@
          ccc = sqrt(uold**2 + vold**2) + u0
          Cb  = Tb(i,j) / ccc ! for seabed stress
          Cl  = Ku(i,j) / ccc ! for coastal drag stress
-         cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb! + Cl ! kg/m^2 s
+         cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb + Cl ! kg/m^2 s
          ccb = fm(i,j) + sign(c1,fm(i,j)) * vrel * sinw ! kg/m^2 s
 
          ! compute the velocity components
@@ -1256,7 +1256,7 @@
          ccc = sqrt(uold**2 + vold**2) + u0
          Cb  = Tb(i,j) / ccc ! for seabed stress
          Cl  = Ku(i,j) / ccc ! for coastal drag stress
-         cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb !+ Cl ! kg/m^2 s
+         cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb + Cl ! kg/m^2 s
          ccb = fm(i,j) + sign(c1,fm(i,j)) * vrel * sinw ! kg/m^2 s
 
          ! compute the velocity components

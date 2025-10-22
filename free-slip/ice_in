@@ -154,7 +154,7 @@
 /
 
 &dynamics_nml
-    boundary_condition   = 'no_slip'
+    boundary_condition   = 'free_slip'
     coastal_drag         = .false.
     Cs                   = 1e-4
     u0                   = 5e-5
@@ -170,7 +170,7 @@
     krdg_partic          = 1
     krdg_redist          = 1
     mu_rdg               = 3
-    Pstar                = 1.0e4
+    Pstar                = 0
     Cstar                = 20
     Cf                   = 17.
     Ktens                = 0.
