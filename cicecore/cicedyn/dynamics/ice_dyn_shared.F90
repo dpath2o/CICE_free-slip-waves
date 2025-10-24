@@ -148,12 +148,17 @@
          coastal_drag, &     ! if true, coastal drag stress for landfast on
          create_form_factors ! if true, create the coastal form factors using the coastline
 
+      real(kind=dbl_kind), dimension(:,:,:), allocatable, public :: &
+         F2     ! coastal form factors
+
       ! character (len=char_len), public :: &
       !    coastline_file       ! NetCDF of coastline
 
       real(kind=dbl_kind), public :: &
          Cs, &  ! static function coefficient; Liu et al. (2022) eq.13; 1.0*10^{−4} m/s^2
          u0     ! residual velocity for coastal drag stress (and seabed stress) (m/s)
+
+
 
       interface strain_rates_T
          module procedure strain_rates_Tdt
@@ -1592,9 +1597,9 @@
       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
          Ku       ! coastal drag stress factor (N/m^2)
       ! (optional but handy: print once on master)
-      ! if (my_task == master_task) then
-      !    write(nu_diag, '(a,2f12.5)') 'ice_dyn_shared.F90 F2(min,max)=', minval(F2), maxval(F2)
-      ! endif
+      if (my_task == master_task) then
+          write(nu_diag, '(a,2f12.5)') 'ice_dyn_shared.F90 F2(min,max)=', minval(F2), maxval(F2)
+      endif
       do ij = 1, icellU
          i       = indxUi(ij)
          j       = indxUj(ij)

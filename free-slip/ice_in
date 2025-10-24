@@ -155,7 +155,7 @@
 
 &dynamics_nml
     boundary_condition   = 'free_slip'
-    coastal_drag         = .false.
+    coastal_drag         = .true.
     Cs                   = 1e-4
     u0                   = 5e-5
     create_form_factors  = .false.
@@ -170,7 +170,7 @@
     krdg_partic          = 1
     krdg_redist          = 1
     mu_rdg               = 3
-    Pstar                = 0
+    Pstar                = 1e4
     Cstar                = 20
     Cf                   = 17.
     Ktens                = 0.
@@ -598,6 +598,14 @@
     f_strinty      = 'd1'
     f_taubx        = 'x'
     f_tauby        = 'x'
+    f_KuxN         = 'd'
+    f_KuyN         = 'd'
+    f_KuxE         = 'd'
+    f_KuyE         = 'd'
+    f_Kux          = 'd1'
+    f_Kuy          = 'd1'
+    f_F2N          = 'd'
+    f_F2E          = 'd'
     f_strength     = 'm'
     f_divu         = 'd1'
     f_shear        = 'd1'

@@ -454,6 +454,12 @@
          f_taubyN = f_tauby
          f_taubxE = f_taubx
          f_taubyE = f_tauby
+         f_KuxN   = f_Kux
+         f_KuyN   = f_Kuy
+         f_KuxE   = f_Kux
+         f_KuyE   = f_Kuy
+         f_F2E    = f_uvel
+         f_F2N    = f_uvel
       endif
 
       call broadcast_scalar (f_tlon, master_task)
@@ -692,6 +698,12 @@
       call broadcast_scalar (f_sistreave, master_task)
       call broadcast_scalar (f_sistremax, master_task)
       call broadcast_scalar (f_sirdgthick, master_task)
+      call broadcast_scalar (f_KuxN, master_task)
+      call broadcast_scalar (f_KuyN, master_task)
+      call broadcast_scalar (f_KuxE, master_task)
+      call broadcast_scalar (f_KuyE, master_task)
+      call broadcast_scalar (f_F2N, master_task)
+      call broadcast_scalar (f_F2E, master_task)
 
       call broadcast_scalar (f_aicen, master_task)
       call broadcast_scalar (f_vicen, master_task)
@@ -1344,6 +1356,31 @@
              "strain rate (vorticity)",                                  &
              "vort is instantaneous, on T grid", secday*c100, c0,                                &
              ns1, f_vort)
+
+        ! coastal drag 
+        call define_hist_field(n_KuxN,"KuxN","N/m^2",nstr2D, ncstr, &
+            "coastal (lateral) drag stress (x)", &
+            "positive is x direction on N grid", c1, c0, ns1, f_KuxN)
+
+        call define_hist_field(n_KuyN,"KuyN","N/m^2",nstr2D, ncstr, &
+            "coastal (lateral) drag stress (y)", &
+            "positive is y direction on N grid", c1, c0, ns1, f_KuyN)
+
+        call define_hist_field(n_KuxE,"KuxE","N/m^2",estr2D, ecstr, &
+            "coastal (lateral) drag stress (x)", &
+            "positive is x direction on E grid", c1, c0, ns1, f_KuxE)
+
+        call define_hist_field(n_KuyE,"KuyE","N/m^2",estr2D, ecstr, &
+            "coastal (lateral) drag stress (y)", &
+            "positive is y direction on E grid", c1, c0, ns1, f_KuyE)
+
+        call define_hist_field(n_F2N, "F2N", "-", nstr2D, ncstr, &
+            "coastal drag form factor (unitless)", &
+            "static; N-face on C-grid", c1, c0, ns1, f_F2N)
+
+        call define_hist_field(n_F2E, "F2E", "-", estr2D, ecstr, &
+            "coastal drag form factor (unitless)", &
+            "static; E-face on C-grid", c1, c0, ns1, f_F2E)
 
          select case (grid_ice)
          case('B')
@@ -2156,7 +2193,7 @@
       use ice_blocks, only: block, get_block, nx_block, ny_block
       use ice_domain, only: blocks_ice, nblocks
       use ice_domain_size, only: nfsd
-      use ice_grid, only: tmask, lmask_n, lmask_s, dxU, dyU, grid_ice
+      use ice_grid, only: tmask, lmask_n, lmask_s, dxU, dyU, grid_ice, F2E, F2N
       use ice_calendar, only: new_year, write_history, &
                               write_ic, timesecs, histfreq, nstreams, mmonth, &
                               new_month
@@ -2182,7 +2219,8 @@
           stressp_2, stressp_3, stressp_4, sig1, sig2, sigP, &
           mlt_onset, frz_onset, dagedtt, dagedtd, fswint_ai, keffn_top, &
           snowfrac, alvdr_ai, alvdf_ai, alidr_ai, alidf_ai, update_ocn_f, &
-          cpl_frazil
+          cpl_frazil, &
+          KuxN, KuyN, KuxE, KuyE
       use ice_arrays_column, only: snowfracn, Cdn_atm
       use ice_history_shared ! almost everything
       use ice_history_write, only: ice_write_hist
@@ -2670,6 +2708,19 @@
          if (f_strength(1:1)/= 'x') &
              call accum_hist_field(n_strength,iblk, strength(:,:,iblk), a2D)
 
+         if (f_KuxN(1:1) /= 'x') &
+             call accum_hist_field(n_KuxN, iblk, KuxN(:,:,iblk), a2D)
+         if (f_KuyN(1:1) /= 'x') &
+             call accum_hist_field(n_KuyN, iblk, KuyN(:,:,iblk), a2D)
+         if (f_KuxE(1:1) /= 'x') &
+             call accum_hist_field(n_KuxE, iblk, KuxE(:,:,iblk), a2D)
+         if (f_KuyE(1:1) /= 'x') &
+             call accum_hist_field(n_KuyE, iblk, KuyE(:,:,iblk), a2D)
+         if (f_F2N(1:1) /= 'x') &
+             call accum_hist_field(n_F2N, iblk, F2N(:,:,iblk), a2D)
+         if (f_F2E(1:1) /= 'x') &
+             call accum_hist_field(n_F2E, iblk, F2E(:,:,iblk), a2D)
+             
 ! The following fields (divu, shear, vort, sig1, and sig2) will be smeared
 !  if averaged over more than a few days.
 ! Snapshots may be more useful (see below).
