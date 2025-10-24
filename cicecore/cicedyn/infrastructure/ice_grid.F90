@@ -2658,35 +2658,24 @@
             ilo = this_block%ilo;  ihi = this_block%ihi
             jlo = this_block%jlo;  jhi = this_block%jhi
             jmid = (jlo + jhi)/2
-
-            ! ---- WEST/EAST boundaries (vertical sides) ----
-            if (do_EW) then
-               ! WEST boundary column: i = ilo
-               do j = jlo, jhi
-                  F2E(ilo, j, iblk) = F2_val   ! E-face on the west boundary column
-                  F2N(ilo, j, iblk) = F2_val   ! N-face belonging to that boundary column cell
-               end do
-               ! EAST boundary column: i = ihi
-               do j = jlo, jhi
-                  F2E(ihi, j, iblk) = F2_val
-                  F2N(ihi, j, iblk) = F2_val
-               end do
-            end if
-
-            ! ---- SOUTH/NORTH boundaries (horizontal sides) ----
-            if (do_NS) then
-               ! SOUTH boundary row: j = jlo
+            ! E faces: i=ilo..ihi-1, j=jlo..jhi
+            do j = jlo, jhi
+               do i = ilo, ihi-1
+                  if ( (tmask(i,j,iblk) .neqv. tmask(i+1,j,iblk)) .and. emask(i,j,iblk) ) then
+                     F2E(i,j,iblk) = F2_val
+                  endif
+               enddo
+            enddo
+            ! N faces: i=ilo..ihi, j=jlo..jhi-1
+            do j = jlo, jhi-1
                do i = ilo, ihi
-               F2E(i, jlo, iblk) = F2_val    ! E-face belonging to the south boundary row cell
-               F2N(i, jlo, iblk) = F2_val    ! N-face on the south boundary row
-               end do
-               ! NORTH boundary row: j = jhi
-               do i = ilo, ihi
-               F2E(i, jhi, iblk) = F2_val
-               F2N(i, jhi, iblk) = F2_val
-               end do
-            end if
-         end do
+                  if ( (tmask(i,j,iblk) .neqv. tmask(i,j+1,iblk)) .and. nmask(i,j,iblk) ) then
+                     F2N(i,j,iblk) = F2_val
+                  endif
+               enddo
+            enddo
+         enddo
+
 
          write(nu_diag,'(a,2es12.4,a,2es12.4)') 'build_F2: F2E(min,max)=', minval(F2E), maxval(F2E), &
                                                 '  F2N(min,max)=', minval(F2N), maxval(F2N)

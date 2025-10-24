@@ -458,8 +458,8 @@
          f_KuyN   = f_Kuy
          f_KuxE   = f_Kux
          f_KuyE   = f_Kuy
-         f_F2E    = f_uvel
-         f_F2N    = f_uvel
+         f_F2E    = f_F2E
+         f_F2N    = f_F2N
       endif
 
       call broadcast_scalar (f_tlon, master_task)
@@ -2720,7 +2720,7 @@
              call accum_hist_field(n_F2N, iblk, F2N(:,:,iblk), a2D)
          if (f_F2E(1:1) /= 'x') &
              call accum_hist_field(n_F2E, iblk, F2E(:,:,iblk), a2D)
-             
+
 ! The following fields (divu, shear, vort, sig1, and sig2) will be smeared
 !  if averaged over more than a few days.
 ! Snapshots may be more useful (see below).

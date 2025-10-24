@@ -156,10 +156,8 @@
       if (coastal_drag .and. create_form_factors) then
          do iblk = 1, nblocks
             this_block = get_block(blocks_ice(iblk), iblk)
-            ilo = this_block%ilo
-            ihi = this_block%ihi
-            jlo = this_block%jlo
-            jhi = this_block%jhi
+            ilo = this_block%ilo;  ihi = this_block%ihi
+            jlo = this_block%jlo;  jhi = this_block%jhi
             do j = jlo, jhi
                do i = ilo, ihi
                   iceEmask(i,j,iblk) = tmask(i,j,iblk) .or. tmask(i+1,j,iblk)
@@ -167,6 +165,7 @@
                enddo
             enddo
          enddo
+         call build_F2_form_factors_box_grid()
       endif
 
       if (evp_algorithm == "shared_mem_1d" ) then
