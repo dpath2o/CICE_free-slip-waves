@@ -666,13 +666,15 @@
          stresspU   (nx_block,ny_block,max_blocks), & ! sigma11+sigma22
          stressmU   (nx_block,ny_block,max_blocks), & ! sigma11-sigma22
          stress12U  (nx_block,ny_block,max_blocks), & ! sigma12
-         KuU        (nx_block,ny_block,max_blocks), & ! coastal drag stress factor at U points (landfast ice)
-         KuN        (nx_block,ny_block,max_blocks), & ! coastal drag stress factor at N points (landfast ice)
-         KuxN       (nx_block,ny_block,max_blocks), & ! coastal drag stress (x) at N points (N/m^2)
-         KuyN       (nx_block,ny_block,max_blocks), & ! coastal drag stress (y) at N points (N/m^2)
-         KuE        (nx_block,ny_block,max_blocks), & ! coastal drag stress factor at E points (landfast ice)
-         KuxE       (nx_block,ny_block,max_blocks), & ! coastal drag stress (x) at E points (N/m^2)
-         KuyE       (nx_block,ny_block,max_blocks), & ! coastal drag stress (y) at E points (N/m^2)
+         KuU        (nx_block,ny_block,max_blocks),  & ! coastal drag stress at U (B-grid)
+         KuE        (nx_block,ny_block,max_blocks),  & ! coastal drag stress at E (C-grid)
+         KuN        (nx_block,ny_block,max_blocks),  & ! coastal drag stress at N (C-grid)
+         KuxU       (nx_block,ny_block,max_blocks),  & ! coastal drag stress x-comp (U)
+         KuyU       (nx_block,ny_block,max_blocks),  & ! coastal drag stress y-comp (U)
+         KuxE       (nx_block,ny_block,max_blocks),  & ! coastal drag stress x-comp (E)
+         KuyE       (nx_block,ny_block,max_blocks),  & ! coastal drag stress y-comp (E)
+         KuxN       (nx_block,ny_block,max_blocks),  & ! coastal drag stress x-comp (N)
+         KuyN       (nx_block,ny_block,max_blocks),  & ! coastal drag stress y-comp (N)
          stat=ierr)
       if (ierr/=0) call abort_ice('(alloc_flux): Out of memory (C or CD grid)')
 

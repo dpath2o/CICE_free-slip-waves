@@ -1142,36 +1142,6 @@
                               uvelN     (:,:,iblk), vvelN     (:,:,iblk), &
                               TbN       (:,:,iblk),                       &
                               KuxN      (:,:,iblk), KuN       (:,:,iblk))
-
-               if (ksub == ndte) then
-                  do j = 1, ny_block
-                     do i = 1, nx_block-1
-                        if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
-                           if ( (epm(i  ,j  , iblk) == c0) .or. (epm(i  ,j-1, iblk) == c0) .or. &
-                                (npm(i  ,j  , iblk) == c0) .or. (npm(i-1,j  , iblk) == c0) ) then
-                              !$OMP CRITICAL (IO_DIAG)
-                              write(nu_diag,'(a,3i6,1p,2e16.8)') 'E-coast AFTER step (blk,i,j): uE, vE =', &
-                              iblk, i, j, uvelE(i,j,iblk), vvelE(i,j,iblk)
-                              !$OMP END CRITICAL (IO_DIAG)
-                           end if
-                        end if
-                     end do
-                  end do
-                  do j = 1, ny_block-1
-                     do i = 1, nx_block
-                        if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
-                           if ( (epm(i  ,j  , iblk) == c0) .or. (epm(i  ,j-1, iblk) == c0) .or. &
-                                (npm(i  ,j  , iblk) == c0) .or. (npm(i-1,j  , iblk) == c0) ) then
-                              !$OMP CRITICAL (IO_DIAG)
-                              write(nu_diag,'(a,3i6,1p,2e16.8)') 'N-coast AFTER step (blk,i,j): vN, uN =', &
-                              iblk, i, j, vvelN(i,j,iblk), uvelN(i,j,iblk)
-                              !$OMP END CRITICAL (IO_DIAG)
-                           end if
-                        end if
-                     end do
-                  end do
-                  call flush(nu_diag)
-               end if
             enddo
             !$OMP END PARALLEL DO
 
@@ -1187,43 +1157,6 @@
             call grid_average_X2Y('A', vvelN, 'N', vvelE, 'E')
             uvelN(:,:,:) = uvelN(:,:,:)*npm(:,:,:)
             vvelE(:,:,:) = vvelE(:,:,:)*epm(:,:,:)
-
-            ! -- DIAG 2: after E<->N reconstruction (last subcycle only) --
-            if (ksub == ndte) then
-               !$OMP PARALLEL DO PRIVATE(iblk,i,j)
-               do iblk = 1, nblocks
-                  ! E faces: normal=uvelE, tangential=vvelE
-                  do j = 1, ny_block
-                     do i = 1, nx_block-1
-                        if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
-                           if ( (epm(i  ,j  , iblk) == c0) .or. (epm(i  ,j-1, iblk) == c0) .or. &
-                                (npm(i  ,j  , iblk) == c0) .or. (npm(i-1,j  , iblk) == c0) ) then
-                              !$OMP CRITICAL (IO_DIAG)
-                              write(nu_diag,'(a,3i6,1p,2e16.8)') 'E-coast AFTER recon (blk,i,j): uE, vE =', &
-                              iblk, i, j, uvelE(i,j,iblk), vvelE(i,j,iblk)
-                              !$OMP END CRITICAL (IO_DIAG)
-                           end if
-                        end if
-                     end do
-                  end do
-                  ! N faces: normal=vvelN, tangential=uvelN
-                  do j = 1, ny_block-1
-                     do i = 1, nx_block
-                        if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
-                           if ( (epm(i  ,j  , iblk) == c0) .or. (epm(i  ,j-1, iblk) == c0) .or. &
-                                (npm(i  ,j  , iblk) == c0) .or. (npm(i-1,j  , iblk) == c0) ) then
-                              !$OMP CRITICAL (IO_DIAG)
-                              write(nu_diag,'(a,3i6,1p,2e16.8)') 'N-coast AFTER recon (blk,i,j): vN, uN =', &
-                              iblk, i, j, vvelN(i,j,iblk), uvelN(i,j,iblk)
-                              !$OMP END CRITICAL (IO_DIAG)
-                           end if
-                        end if
-                     end do
-                  end do
-               end do
-               !$OMP END PARALLEL DO
-               call flush(nu_diag)
-            end if
 
             ! calls ice_haloUpdate, controls bundles and masks
             call dyn_haloUpdate (halo_info,       halo_info_mask,    &

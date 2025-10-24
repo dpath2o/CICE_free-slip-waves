@@ -2670,20 +2670,20 @@
 
          ! Delta (in the denominator of zeta, eta)
          DeltaU(i,j)   = sqrt(divergU(i,j)**2 + e_factor*(tensionU(i,j)**2 + shearU(i,j)**2))
-         ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
-         if (ksub == ndte) then
-            ! U(i,j) is the NE corner of T(i,j). It is "coastal" if any of the
-            ! four faces meeting at the corner are land (mask==0).
-            ! Adjacent faces around U(i,j): E(i,j), E(i,j-1), N(i,j), N(i-1,j)
-            if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
-               if ( (epm(i  ,j  ) == c0) .or. (epm(i  ,j-1) == c0) .or. &
-                    (npm(i  ,j  ) == c0) .or. (npm(i-1,j  ) == c0) ) then
-                  !$OMP CRITICAL (IO_DIAG)
-                  write(nu_diag,'(a,2i6,1p,e16.8)') 'no-slip U-coast shearU  (i,j)=', i, j, shearU(i,j)
-                  !$OMP END CRITICAL (IO_DIAG)
-               end if
-            end if
-         end if
+         ! ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
+         ! if (ksub == ndte) then
+         !    ! U(i,j) is the NE corner of T(i,j). It is "coastal" if any of the
+         !    ! four faces meeting at the corner are land (mask==0).
+         !    ! Adjacent faces around U(i,j): E(i,j), E(i,j-1), N(i,j), N(i-1,j)
+         !    if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
+         !       if ( (epm(i  ,j  ) == c0) .or. (epm(i  ,j-1) == c0) .or. &
+         !            (npm(i  ,j  ) == c0) .or. (npm(i-1,j  ) == c0) ) then
+         !          !$OMP CRITICAL (IO_DIAG)
+         !          write(nu_diag,'(a,2i6,1p,e16.8)') 'no-slip U-coast shearU  (i,j)=', i, j, shearU(i,j)
+         !          !$OMP END CRITICAL (IO_DIAG)
+         !       end if
+         !    end if
+         ! end if
       enddo
       if (ksub == ndte) call flush(nu_diag)
       end subroutine strain_rates_U_no_slip
@@ -2767,20 +2767,20 @@
             ! shear = 2 e_12
             shearU(i,j) =  dxU(i,j) * (uEijp1 - uEij) - uvelU(i,j) * (dxE(i  ,j+1) - dxE(i,j))  &
                         +  dyU(i,j) * (vNip1j - vNij) - vvelU(i,j) * (dyN(i+1,j  ) - dyN(i,j))
-         ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
-         if (ksub == ndte) then
-            ! U(i,j) is the NE corner of T(i,j). It is "coastal" if any of the
-            ! four faces meeting at the corner are land (mask==0).
-            ! Adjacent faces around U(i,j): E(i,j), E(i,j-1), N(i,j), N(i-1,j)
-            if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
-               if ( (epm(i  ,j  ) == c0) .or. (epm(i  ,j-1) == c0) .or. &
-                    (npm(i  ,j  ) == c0) .or. (npm(i-1,j  ) == c0) ) then
-                  !$OMP CRITICAL (IO_DIAG)
-                  write(nu_diag,'(a,2i6,1p,e16.8)') 'free-slip U-coast shearU  (i,j)=', i, j, shearU(i,j)
-                  !$OMP END CRITICAL (IO_DIAG)
-               end if
-            end if
-         end if
+         ! ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
+         ! if (ksub == ndte) then
+         !    ! U(i,j) is the NE corner of T(i,j). It is "coastal" if any of the
+         !    ! four faces meeting at the corner are land (mask==0).
+         !    ! Adjacent faces around U(i,j): E(i,j), E(i,j-1), N(i,j), N(i-1,j)
+         !    if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
+         !       if ( (epm(i  ,j  ) == c0) .or. (epm(i  ,j-1) == c0) .or. &
+         !            (npm(i  ,j  ) == c0) .or. (npm(i-1,j  ) == c0) ) then
+         !          !$OMP CRITICAL (IO_DIAG)
+         !          write(nu_diag,'(a,2i6,1p,e16.8)') 'free-slip U-coast shearU  (i,j)=', i, j, shearU(i,j)
+         !          !$OMP END CRITICAL (IO_DIAG)
+         !       end if
+         !    end if
+         ! end if
       enddo
       if (ksub == ndte) call flush(nu_diag)
       end subroutine strain_rates_U_free_slip
