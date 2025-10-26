@@ -135,6 +135,7 @@
       use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, &
          iceEmask, iceNmask, coastal_drag, create_form_factors
       use ice_dyn_evp1d, only: dyn_evp1d_init
+      use ice_forcing, only: atm_data_type
 
 !allocate c and cd grid var. Follow structucre of eap
       integer (int_kind) :: ierr
@@ -152,7 +153,7 @@
       call init_dyn_shared(dt_dyn)
 
       !------------------------------------------------
-      ! coastal drag masking 
+      ! coastal drag masking and form factor construction
       if (coastal_drag .and. create_form_factors) then
          do iblk = 1, nblocks
             this_block = get_block(blocks_ice(iblk), iblk)
@@ -165,7 +166,7 @@
                enddo
             enddo
          enddo
-         call build_F2_form_factors_box_grid()
+         call build_F2_form_factors_box_grid(atm_data_type)
       endif
 
       if (evp_algorithm == "shared_mem_1d" ) then
@@ -361,6 +362,8 @@
          this_block   ! block information for current block
 
       character(len=*), parameter :: subname = '(evp)'
+
+      integer (kind=int_kind) :: nE, nN, nU
 
       call ice_timer_start(timer_dynamics) ! dynamics
 
@@ -1039,6 +1042,51 @@
             enddo  ! iblk
             !$OMP END PARALLEL DO
 
+            ! --- Diagnostics at end of subcycling ---------------------------------
+            if (ksub == ndte) then
+               nE = count(epm > c0)
+               nN = count(npm > c0)
+               nU = count(uvm > c0)
+               ! E-faces (BEFORE stepu_C)
+               write(nu_diag,9000) 'BEFORE stepu_C  F2E  min/max/avg =', &
+                  minval(F2E , mask=epm>c0),  maxval(F2E , mask=epm>c0),  &
+                  sum(F2E , mask=epm>c0)/real(max(1,nE),dbl_kind)
+               write(nu_diag,9000) 'BEFORE stepu_C  KuE  min/max/avg =', &
+                  minval(KuE , mask=epm>c0),  maxval(KuE , mask=epm>c0),  &
+                  sum(KuE , mask=epm>c0)/real(max(1,nE),dbl_kind)
+               write(nu_diag,9000) 'BEFORE stepu_C  KuxE min/max/avg =', &
+                  minval(KuxE, mask=epm>c0),  maxval(KuxE, mask=epm>c0),  &
+                  sum(KuxE, mask=epm>c0)/real(max(1,nE),dbl_kind)
+               write(nu_diag,9000) 'BEFORE stepu_C  KuyE min/max/avg =', &
+                  minval(KuyE, mask=epm>c0),  maxval(KuyE, mask=epm>c0),  &
+                  sum(KuyE, mask=epm>c0)/real(max(1,nE),dbl_kind)
+               ! N-faces (BEFORE stepv_C)
+               write(nu_diag,9000) 'BEFORE stepv_C  F2N  min/max/avg =', &
+                  minval(F2N , mask=npm>c0),  maxval(F2N , mask=npm>c0),  &
+                  sum(F2N , mask=npm>c0)/real(max(1,nN),dbl_kind)
+               write(nu_diag,9000) 'BEFORE stepv_C  KuN  min/max/avg =', &
+                  minval(KuN , mask=npm>c0),  maxval(KuN , mask=npm>c0),  &
+                  sum(KuN , mask=npm>c0)/real(max(1,nN),dbl_kind)
+               write(nu_diag,9000) 'BEFORE stepv_C  KuxN min/max/avg =', &
+                  minval(KuxN, mask=npm>c0),  maxval(KuxN, mask=npm>c0),  &
+                  sum(KuxN, mask=npm>c0)/real(max(1,nN),dbl_kind)
+               write(nu_diag,9000) 'BEFORE stepv_C  KuyN min/max/avg =', &
+                  minval(KuyN, mask=npm>c0),  maxval(KuyN, mask=npm>c0),  &
+                  sum(KuyN, mask=npm>c0)/real(max(1,nN),dbl_kind)
+               ! U-corners (BEFORE stressC_U / U-averaging)
+               write(nu_diag,9000) 'BEFORE stressC_U KuU  min/max/avg =', &
+                  minval(KuU , mask=uvm>c0),  maxval(KuU , mask=uvm>c0),  &
+                  sum(KuU , mask=uvm>c0)/real(max(1,nU),dbl_kind)
+               write(nu_diag,9000) 'BEFORE stressC_U KuxU min/max/avg =', &
+                  minval(KuxU, mask=uvm>c0),  maxval(KuxU, mask=uvm>c0),  &
+                  sum(KuxU, mask=uvm>c0)/real(max(1,nU),dbl_kind)
+               write(nu_diag,9000) 'BEFORE stressC_U KuyU min/max/avg =', &
+                  minval(KuyU, mask=uvm>c0),  maxval(KuyU, mask=uvm>c0),  &
+                  sum(KuyU, mask=uvm>c0)/real(max(1,nU),dbl_kind)
+            end if
+            9000 format(a,3(1pe16.8,1x))
+            ! ----------------------------------------------------------------------
+
             ! calls ice_haloUpdate, controls bundles and masks
             call dyn_haloUpdate (halo_info,          halo_info_mask,    &
                                  field_loc_NEcorner, field_type_scalar, &
@@ -1144,6 +1192,51 @@
                               KuxN      (:,:,iblk), KuN       (:,:,iblk))
             enddo
             !$OMP END PARALLEL DO
+
+            ! --- Diagnostics at end of subcycling ---------------------------------
+            if (ksub == ndte) then
+               nE = count(epm > c0)
+               nN = count(npm > c0)
+               nU = count(uvm > c0)
+               ! E-faces (after stepu_C)
+               write(nu_diag,9000) 'AFTER stepu_C  F2E  min/max/avg =', &
+                  minval(F2E , mask=epm>c0),  maxval(F2E , mask=epm>c0),  &
+                  sum(F2E , mask=epm>c0)/real(max(1,nE),dbl_kind)
+               write(nu_diag,9000) 'AFTER stepu_C  KuE  min/max/avg =', &
+                  minval(KuE , mask=epm>c0),  maxval(KuE , mask=epm>c0),  &
+                  sum(KuE , mask=epm>c0)/real(max(1,nE),dbl_kind)
+               write(nu_diag,9000) 'AFTER stepu_C  KuxE min/max/avg =', &
+                  minval(KuxE, mask=epm>c0),  maxval(KuxE, mask=epm>c0),  &
+                  sum(KuxE, mask=epm>c0)/real(max(1,nE),dbl_kind)
+               write(nu_diag,9000) 'AFTER stepu_C  KuyE min/max/avg =', &
+                  minval(KuyE, mask=epm>c0),  maxval(KuyE, mask=epm>c0),  &
+                  sum(KuyE, mask=epm>c0)/real(max(1,nE),dbl_kind)
+               ! N-faces (after stepv_C)
+               write(nu_diag,9000) 'AFTER stepv_C  F2N  min/max/avg =', &
+                  minval(F2N , mask=npm>c0),  maxval(F2N , mask=npm>c0),  &
+                  sum(F2N , mask=npm>c0)/real(max(1,nN),dbl_kind)
+               write(nu_diag,9000) 'AFTER stepv_C  KuN  min/max/avg =', &
+                  minval(KuN , mask=npm>c0),  maxval(KuN , mask=npm>c0),  &
+                  sum(KuN , mask=npm>c0)/real(max(1,nN),dbl_kind)
+               write(nu_diag,9000) 'AFTER stepv_C  KuxN min/max/avg =', &
+                  minval(KuxN, mask=npm>c0),  maxval(KuxN, mask=npm>c0),  &
+                  sum(KuxN, mask=npm>c0)/real(max(1,nN),dbl_kind)
+               write(nu_diag,9000) 'AFTER stepv_C  KuyN min/max/avg =', &
+                  minval(KuyN, mask=npm>c0),  maxval(KuyN, mask=npm>c0),  &
+                  sum(KuyN, mask=npm>c0)/real(max(1,nN),dbl_kind)
+               ! U-corners (after stressC_U / U-averaging)
+               write(nu_diag,9000) 'AFTER stressC_U KuU  min/max/avg =', &
+                  minval(KuU , mask=uvm>c0),  maxval(KuU , mask=uvm>c0),  &
+                  sum(KuU , mask=uvm>c0)/real(max(1,nU),dbl_kind)
+               write(nu_diag,9000) 'AFTER stressC_U KuxU min/max/avg =', &
+                  minval(KuxU, mask=uvm>c0),  maxval(KuxU, mask=uvm>c0),  &
+                  sum(KuxU, mask=uvm>c0)/real(max(1,nU),dbl_kind)
+               write(nu_diag,9000) 'AFTER stressC_U KuyU min/max/avg =', &
+                  minval(KuyU, mask=uvm>c0),  maxval(KuyU, mask=uvm>c0),  &
+                  sum(KuyU, mask=uvm>c0)/real(max(1,nU),dbl_kind)
+            end if
+            ! ----------------------------------------------------------------------
+
 
             ! calls ice_haloUpdate, controls bundles and masks
             call dyn_haloUpdate (halo_info,       halo_info_mask,    &

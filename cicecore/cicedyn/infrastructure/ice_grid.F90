@@ -2676,7 +2676,6 @@
             enddo
          enddo
 
-
          write(nu_diag,'(a,2es12.4,a,2es12.4)') 'build_F2: F2E(min,max)=', minval(F2E), maxval(F2E), &
                                                 '  F2N(min,max)=', minval(F2N), maxval(F2N)
          write(nu_diag,'(a,i10,a,i10)') 'build_F2: active faces:  E=', count(F2E>0.0d0), '  N=', count(F2N>0.0d0)

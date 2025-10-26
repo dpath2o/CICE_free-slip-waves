@@ -134,7 +134,7 @@
       call init_calendar        ! initialize some calendar stuff
       call init_hist (dt)       ! initialize output history file
 
-      call build_F2_form_factors_box_grid(atm_data_type) ! initialise/build form factors at start of CICE
+      !call build_F2_form_factors_box_grid(atm_data_type) ! initialise/build form factors at start of CICE
                                                          ! dpath2o: this will need to go into couplers as well
 
       if (kdyn == 1) then
