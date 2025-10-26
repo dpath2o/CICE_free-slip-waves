@@ -17,7 +17,6 @@
       use ice_domain_size, only: max_blocks
       use ice_fileunits, only: nu_diag
       use ice_exit, only: abort_ice
-      use ice_grid, only: grid_ice
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
       use icepack_intfc, only: icepack_query_parameters
 
@@ -148,8 +147,12 @@
          coastal_drag, &     ! if true, coastal drag stress for landfast on
          create_form_factors ! if true, create the coastal form factors using the coastline
 
+      ! real(kind=dbl_kind), dimension(:,:,:), allocatable, public :: &
+      !    F2_loc     ! coastal form factors
+      
       real(kind=dbl_kind), dimension(:,:,:), allocatable, public :: &
-         F2     ! coastal form factors
+         F2E(:,:,:), F2N(:,:,:)
+      logical(kind=log_kind),       public, save :: cdp_ff_built = .false._log_kind
 
       ! character (len=char_len), public :: &
       !    coastline_file       ! NetCDF of coastline
@@ -1574,7 +1577,7 @@
                                             indxUi  , indxUj  , &
                                             imass   ,           &
                                             Ku      ,           & 
-                                            F2                  ) 
+                                            F2_loc              ) 
       character(len=*), parameter :: subname = '(coastal_drag_stress_factor)'
       ! blocks:
       integer (kind=int_kind), intent(in) :: &
@@ -1589,19 +1592,19 @@
       ! sea ice variables: 
       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(in) :: &
          imass, & ! total mass of sea ice (includes snow) at E or N grid points
-         F2       ! coastline form factor -- computed offline; (N/m^2)
+         F2_loc       ! coastline form factor -- computed offline; (N/m^2)
       ! compute Ku at each grid point 
-      ! (away from the coast it should go to zero as F2 goes to zero)
+      ! (away from the coast it should go to zero as F2_loc goes to zero)
       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
          Ku       ! coastal drag stress factor (N/m^2)
       ! (optional but handy: print once on master)
       if (my_task == master_task) then
-          write(nu_diag, '(a,2f12.5)') 'ice_dyn_shared.F90 F2(min,max)=', minval(F2), maxval(F2)
+          write(nu_diag, '(a,2f12.5)') 'ice_dyn_shared.F90 F2_loc(min,max)=', minval(F2_loc), maxval(F2_loc)
       endif
       do ij = 1, icellU
          i       = indxUi(ij)
          j       = indxUj(ij)
-         Ku(i,j) = imass(i,j) * F2(i,j) * Cs
+         Ku(i,j) = imass(i,j) * F2_loc(i,j) * Cs
       enddo ! ij
       end subroutine coastal_drag_stress_factor
 

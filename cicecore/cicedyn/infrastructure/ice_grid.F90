@@ -2610,12 +2610,13 @@
 
 
 !=======================================================================
-subroutine build_F2_form_factors_cgrid(F2E, F2N, coast_file, coast_var, F2_value, test_case)
+subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_case)
    use ice_kinds_mod
-   use ice_blocks       , only: get_block, nx_block, ny_block, block
-   use ice_domain       , only: nblocks, blocks_ice
-   use ice_domain_size  , only: max_blocks
-   use ice_fileunits    , only: nu_diag
+   use ice_blocks     , only: get_block, nx_block, ny_block, block
+   use ice_domain     , only: nblocks, blocks_ice
+   use ice_domain_size, only: max_blocks
+   use ice_fileunits  , only: nu_diag
+   use ice_dyn_shared , only: F2E, F2N, cdp_ff_built 
 #ifdef _NETCDF
    use netcdf
 #endif
@@ -2626,9 +2627,9 @@ subroutine build_F2_form_factors_cgrid(F2E, F2N, coast_file, coast_var, F2_value
    real   (kind=dbl_kind),   intent(in), optional :: F2_value    ! default 0.25
    logical(kind=log_kind),   intent(in), optional :: test_case   ! if true and no coast_file, treat perimeter as coastline
 
-   ! ---- REQUIRED outputs (already allocated by caller) ----
-   real(kind=dbl_kind), intent(inout) :: F2E(nx_block,ny_block,max_blocks)
-   real(kind=dbl_kind), intent(inout) :: F2N(nx_block,ny_block,max_blocks)
+   ! ! ---- REQUIRED outputs (already allocated by caller) ----
+   ! real(kind=dbl_kind), intent(out) :: F2E(nx_block,ny_block,max_blocks)
+   ! real(kind=dbl_kind), intent(out) :: F2N(nx_block,ny_block,max_blocks)
 
    ! ----- locals -----
    type(block)               :: this_block
@@ -2653,8 +2654,8 @@ subroutine build_F2_form_factors_cgrid(F2E, F2N, coast_file, coast_var, F2_value
    want_perimeter = .false.; if (present(test_case)) want_perimeter = test_case
 
    ! ----- allocate/clear outputs -----
-   ! if (.not. allocated(F2E)) allocate(F2E(nx_block,ny_block,max_blocks))
-   ! if (.not. allocated(F2N)) allocate(F2N(nx_block,ny_block,max_blocks))
+   if (.not. allocated(F2E)) allocate(F2E(nx_block,ny_block,max_blocks))
+   if (.not. allocated(F2N)) allocate(F2N(nx_block,ny_block,max_blocks))
    F2E = 0.0d0
    F2N = 0.0d0
 
@@ -2767,6 +2768,8 @@ subroutine build_F2_form_factors_cgrid(F2E, F2N, coast_file, coast_var, F2_value
          setN = count(F2N > 0.0d0)
       end if
    end if
+
+   cdp_ff_built = .true._log_kind
 
    ! ----- cleanup -----
    if (use_coast) then

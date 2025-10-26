@@ -130,10 +130,10 @@
       use ice_domain_size, only: max_blocks
       use ice_domain, only: nblocks, blocks_ice
       use ice_grid, only: grid_ice, dyT, dxT, uarear, tmask, G_HTE, G_HTN, dxN, dyE, &
-         build_F2_form_factors_cgrid, F2E, F2N
+         build_F2_form_factors_cgrid
       use ice_calendar, only: dt_dyn
       use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, &
-         iceEmask, iceNmask, coastal_drag, create_form_factors
+         iceEmask, iceNmask, coastal_drag, create_form_factors, F2E, F2N, cdp_ff_built
       use ice_dyn_evp1d, only: dyn_evp1d_init
 
 !allocate c and cd grid var. Follow structucre of eap
@@ -154,22 +154,25 @@
       !------------------------------------------------
       ! coastal drag masking and form factor construction
       if (coastal_drag .and. create_form_factors) then
-         ! do iblk = 1, nblocks
-         !    this_block = get_block(blocks_ice(iblk), iblk)
-         !    ilo = this_block%ilo;  ihi = this_block%ihi
-         !    jlo = this_block%jlo;  jhi = this_block%jhi
-         !    do j = jlo, jhi
-         !       do i = ilo, ihi
-         !          iceEmask(i,j,iblk) = tmask(i,j,iblk) .or. tmask(i+1,j,iblk)
-         !          iceNmask(i,j,iblk) = tmask(i,j,iblk) .or. tmask(i,j+1,iblk)
-         !       enddo
-         !    enddo
-         ! enddo
-         if (.not. allocated(F2E)) allocate(F2E(nx_block,ny_block,max_blocks))
-         if (.not. allocated(F2N)) allocate(F2N(nx_block,ny_block,max_blocks))
-         call build_F2_form_factors_cgrid(F2E, F2N, test_case=.true.)
-         !call build_F2_form_factors_cgrid()
+         call build_F2_form_factors_cgrid(test_case=.true.)   ! perimeter fallback for your 12×12 ocean box
       endif
+      ! if (coastal_drag .and. create_form_factors) then
+      !    ! do iblk = 1, nblocks
+      !    !    this_block = get_block(blocks_ice(iblk), iblk)
+      !    !    ilo = this_block%ilo;  ihi = this_block%ihi
+      !    !    jlo = this_block%jlo;  jhi = this_block%jhi
+      !    !    do j = jlo, jhi
+      !    !       do i = ilo, ihi
+      !    !          iceEmask(i,j,iblk) = tmask(i,j,iblk) .or. tmask(i+1,j,iblk)
+      !    !          iceNmask(i,j,iblk) = tmask(i,j,iblk) .or. tmask(i,j+1,iblk)
+      !    !       enddo
+      !    !    enddo
+      !    ! enddo
+      !    if (.not. allocated(F2E)) allocate(F2E(nx_block,ny_block,max_blocks))
+      !    if (.not. allocated(F2N)) allocate(F2N(nx_block,ny_block,max_blocks))
+      !    call build_F2_form_factors_cgrid(F2E, F2N, test_case=.true.)
+      !    !call build_F2_form_factors_cgrid()
+      ! endif
 
       if (evp_algorithm == "shared_mem_1d" ) then
          call dyn_evp1d_init
@@ -304,8 +307,8 @@
       use ice_grid, only: tmask, umask, umaskCD, nmask, emask, uvm, epm, npm, &
           dxE, dxN, dxT, dxU, dyE, dyN, dyT, dyU, &
           tarear, uarear, earear, narear, grid_average_X2Y, uarea, &
-          grid_ice, grid_atm_dynu, grid_atm_dynv, grid_ocn_dynu, grid_ocn_dynv, &
-          F2E, F2N
+          grid_ice, grid_atm_dynu, grid_atm_dynv, grid_ocn_dynu, grid_ocn_dynv!, &
+          !F2E, F2N
       use ice_state, only: aice, aiU, vice, vsno, uvel, vvel, uvelN, vvelN, &
           uvelE, vvelE, divu, shear, vort, &
           aice_init, aice0, aicen, vicen, strength
@@ -315,7 +318,8 @@
           DminTarea, visc_method, deformations, deformationsC_T, deformationsCD_T, &
           strain_rates_U_no_slip, strain_rates_U_free_slip, dxhy, dyhx, cxp, cyp, cxm, cym, &
           iceTmask, iceUmask, iceEmask, iceNmask, &
-          dyn_haloUpdate, fld2, fld3, fld4
+          dyn_haloUpdate, fld2, fld3, fld4, &
+          F2E, F2N, cdp_ff_built
       use ice_dyn_evp1d, only: dyn_evp1d_run
 
       real (kind=dbl_kind), intent(in) :: &
@@ -824,39 +828,39 @@
             nN = count(npm > c0)
             nU = count(uvm > c0)
             ! E-faces (AT CDP CALL stepu_C)
-            write(nu_diag,9000) 'AT CDP CALL stepu_C  F2E  min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CAL F2E  min/max/avg =', &
                minval(F2E , mask=epm>c0),  maxval(F2E , mask=epm>c0),  &
                sum(F2E , mask=epm>c0)/real(max(1,nE),dbl_kind)
-            write(nu_diag,9000) 'AT CDP CALL stepu_C  KuE  min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CALL KuE  min/max/avg =', &
                minval(KuE , mask=epm>c0),  maxval(KuE , mask=epm>c0),  &
                sum(KuE , mask=epm>c0)/real(max(1,nE),dbl_kind)
-            write(nu_diag,9000) 'AT CDP CALL stepu_C  KuxE min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CALL KuxE min/max/avg =', &
                minval(KuxE, mask=epm>c0),  maxval(KuxE, mask=epm>c0),  &
                sum(KuxE, mask=epm>c0)/real(max(1,nE),dbl_kind)
-            write(nu_diag,9000) 'AT CDP CALL stepu_C  KuyE min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CALL KuyE min/max/avg =', &
                minval(KuyE, mask=epm>c0),  maxval(KuyE, mask=epm>c0),  &
                sum(KuyE, mask=epm>c0)/real(max(1,nE),dbl_kind)
             ! N-faces (AT CDP CALL stepv_C)
-            write(nu_diag,9000) 'AT CDP CALL stepv_C  F2N  min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CALL F2N  min/max/avg =', &
                minval(F2N , mask=npm>c0),  maxval(F2N , mask=npm>c0),  &
                sum(F2N , mask=npm>c0)/real(max(1,nN),dbl_kind)
-            write(nu_diag,9000) 'AT CDP CALL stepv_C  KuN  min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CALL KuN  min/max/avg =', &
                minval(KuN , mask=npm>c0),  maxval(KuN , mask=npm>c0),  &
                sum(KuN , mask=npm>c0)/real(max(1,nN),dbl_kind)
-            write(nu_diag,9000) 'AT CDP CALL stepv_C  KuxN min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CALL KuxN min/max/avg =', &
                minval(KuxN, mask=npm>c0),  maxval(KuxN, mask=npm>c0),  &
                sum(KuxN, mask=npm>c0)/real(max(1,nN),dbl_kind)
-            write(nu_diag,9000) 'AT CDP CALL stepv_C  KuyN min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CALL KuyN min/max/avg =', &
                minval(KuyN, mask=npm>c0),  maxval(KuyN, mask=npm>c0),  &
                sum(KuyN, mask=npm>c0)/real(max(1,nN),dbl_kind)
             ! U-corners (AT CDP CALL stressC_U / U-averaging)
-            write(nu_diag,9000) 'AT CDP CALL stressC_U KuU  min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CALL KuU  min/max/avg =', &
                minval(KuU , mask=uvm>c0),  maxval(KuU , mask=uvm>c0),  &
                sum(KuU , mask=uvm>c0)/real(max(1,nU),dbl_kind)
-            write(nu_diag,9000) 'AT CDP CALL stressC_U KuxU min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CALL KuxU min/max/avg =', &
                minval(KuxU, mask=uvm>c0),  maxval(KuxU, mask=uvm>c0),  &
                sum(KuxU, mask=uvm>c0)/real(max(1,nU),dbl_kind)
-            write(nu_diag,9000) 'AT CDP CALL stressC_U KuyU min/max/avg =', &
+            write(nu_diag,9000) 'AT CDP CALL KuyU min/max/avg =', &
                minval(KuyU, mask=uvm>c0),  maxval(KuyU, mask=uvm>c0),  &
                sum(KuyU, mask=uvm>c0)/real(max(1,nU),dbl_kind)
             9000 format(a,3(1pe16.8,1x))
