@@ -51,7 +51,7 @@
       public :: init_grid1, init_grid2, grid_average_X2Y, makemask, &
                 alloc_grid, dealloc_grid, &
                 grid_neighbor_min, grid_neighbor_max, &
-                build_F2_form_factors_box_grid
+                build_F2_form_factors_cgrid
 
       character (len=char_len_long), public :: &
          grid_format  , & ! file format ('bin'=binary or 'pop_nc'= pop netcdf or 'mom_nc'=mom (supergrid) netcdf)
@@ -2609,77 +2609,164 @@
       end subroutine rectgrid_scale_dxdy
 
 !-----------------------------------------------------------------------
-! Boundary-only F2 builder for a rectangular C-grid test domain (CICE 6).
-! - F2E(i,j) are E (u) faces at the east side of T-cells (i,j).
-! - F2N(i,j) are N (v) faces at the north side of T-cells (i,j).
-! - Nonzero ONLY on physical boundary lines (one face thick), and which
-!   boundaries are active depends on wind tag adt_in.
-!   * 'uniform_north' or 'uniform_south' -> WEST & EAST active
-!   * 'uniform_west'  or 'uniform_east'  -> SOUTH & NORTH active
-!   * otherwise -> all four active
-! - On any active boundary, set BOTH F2E and F2N > 0 per your spec.
+! Wind-independent coastal F2 builder (CICE6 C-grid).
+! - Sets F2E (E/u faces) and F2N (N/v faces) positive where adjacent
+!   T cells differ (land vs ocean) per Liu et al. (2022) "F2" idea.
+! - Uses a provided coastline NetCDF (T-grid) if given; otherwise falls
+!   back to underlying tmask adjacency (testing mode).
+! - F2 magnitude is a constant placeholder (F2_value). Replace with a
+!   geometrical fraction along the face if/when available.
 !-----------------------------------------------------------------------
-      subroutine build_F2_form_factors_box_grid(adt_in)
+      subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_case)
          use ice_kinds_mod
          use ice_blocks       , only: get_block, nx_block, ny_block, block
          use ice_domain       , only: nblocks, blocks_ice
          use ice_domain_size  , only: max_blocks
          use ice_fileunits    , only: nu_diag
+#ifdef _NETCDF
+   use netcdf
+#endif
          implicit none
-         character(len=*), intent(in), optional :: adt_in
+         ! optional inputs
+         character(len=*)        , intent(in), optional :: coast_file ! path to NetCDF coastline mask on T grid
+         character(len=*)        , intent(in), optional :: coast_var  ! var name in coast_file (default 'coastmask')
+         real     (kind=dbl_kind), intent(in), optional :: F2_value   ! default 0.25d0
+         logical  (kind=log_kind), intent(in), optional :: test_case
+         ! allocatable
+         real     (kind=dbl_kind), allocatable :: &
+            coastT(:,: )! Local per-block coastline (T-grid) when reading a per-block-sized field
+         ! locals
+         logical  (kind=log_kind) :: oceL, oceR, oceS, oceN
+         type     (block)         :: this_block
+         integer  (kind=int_kind) :: iblk, i, j, ilo, ihi, jlo, jhi
+         logical  (kind=log_kind) :: use_coast, do_perimeter
+         ! real     (kind=dbl_kind) :: F2_val
+         integer  (kind=int_kind) :: ncid, varid, ierr
+         integer  (kind=int_kind) :: cntE_adj, cntN_adj, cntE_act, cntN_act
+         character(len=64) :: vname
+         ! --- configuration
+         F2_val = merge(F2_value, 0.25d0, present(F2_value))
+         vname  = 'coastmask'
+         if (present(coast_var)) vname = trim(coast_var)
+         do_perimeter = .false.
+         if (present(test_case)) do_perimeter = test_case
 
-         real(kind=dbl_kind), parameter :: F2_val = 0.25d0  ! placeholder constant
-         type(block) :: this_block
-         integer(kind=int_kind) :: iblk, i, j, ilo, ihi, jlo, jhi, jmid
-         character(len=32) :: adt
-         logical :: do_NS, do_EW
-
+         ! --- allocate/clear outputs
          if (.not. allocated(F2E)) allocate(F2E(nx_block,ny_block,max_blocks))
          if (.not. allocated(F2N)) allocate(F2N(nx_block,ny_block,max_blocks))
          F2E = 0.0d0
          F2N = 0.0d0
 
-         adt = 'both'
-         if (present(adt_in)) adt = trim(adt_in)
+         ! We will try to use a coastline file iff provided AND we can read a
+         ! 2-D array that matches the local block shape. Otherwise, we fall back.
+         use_coast = .false.
+#ifdef _NETCDF
+   if (present(coast_file)) then
+      ierr = nf90_open(trim(coast_file), NF90_NOWRITE, ncid)
+      if (ierr == NF90_NOERR) then
+         ! Try to read a 2-D slab matching (nx_block, ny_block).
+         ! Many setups store global dims; robust slicing would require
+         ! global->block mapping. For now, expect per-block-sized fields.
+         allocate(coastT(nx_block,ny_block))
+         ierr = nf90_inq_varid(ncid, trim(vname), varid)
+         if (ierr == NF90_NOERR) then
+            ierr = nf90_get_var(ncid, varid, coastT)
+            if (ierr == NF90_NOERR) then
+               use_coast = .true.
+               write(nu_diag,'(a,1x,a,1x,a)') 'build_F2: using coastline from', trim(coast_file), trim(vname)
+            else
+               write(nu_diag,'(a,1x,i0)') 'build_F2: coast get_var failed; fallback to tmask, ierr=', ierr
+               deallocate(coastT)
+            end if
+         else
+            write(nu_diag,'(a,1x,a,1x,i0)') 'build_F2: coast var not found:', trim(vname), ierr
+            deallocate(coastT)
+         end if
+         call nf90_close(ncid)
+      else
+         write(nu_diag,'(a,1x,a,1x,i0)') 'build_F2: coast file open failed:', trim(coast_file), ierr
+      end if
+   end if
+#else
+   if (present(coast_file)) then
+      write(nu_diag,'(a)') 'build_F2: NetCDF not enabled; ignoring coast_file and using tmask.'
+   end if
+#endif
 
-         select case (adt)
-         case ('uniform_west','uniform_east')
-            do_NS = .true. ; do_EW = .false.     ! activate SOUTH & NORTH
-         case ('uniform_north','uniform_south')
-            do_NS = .false.; do_EW = .true.      ! activate WEST  & EAST
-         case default
-            do_NS = .true. ; do_EW = .true.
-         end select
-
-         write(nu_diag,'(a,a,2(a,l1))') 'build_F2(boundary-only): adt=',trim(adt),'  NS=',do_NS,'  EW=',do_EW
-
-         do iblk = 1, nblocks
-            this_block = get_block(blocks_ice(iblk), iblk)
-            ilo = this_block%ilo;  ihi = this_block%ihi
-            jlo = this_block%jlo;  jhi = this_block%jhi
-            jmid = (jlo + jhi)/2
-            ! E faces: i=ilo..ihi-1, j=jlo..jhi
-            do j = jlo, jhi
-               do i = ilo, ihi-1
-                  if ( (tmask(i,j,iblk) .neqv. tmask(i+1,j,iblk)) .and. emask(i,j,iblk) ) then
-                     F2E(i,j,iblk) = F2_val
-                  endif
-               enddo
-            enddo
-            ! N faces: i=ilo..ihi, j=jlo..jhi-1
-            do j = jlo, jhi-1
+         ! --- Main build loop (blockwise)
+         ! Optional: treat domain perimeter as coastline (fallback only)
+         if (.not. use_coast .and. do_perimeter) then
+            write(nu_diag,'(a)') 'build_F2: perimeter treated as coastline (fallback mode).'
+            !$OMP PARALLEL DO PRIVATE(iblk,ilo,ihi,jlo,jhi,this_block,i,j) SCHEDULE(runtime)
+            do iblk = 1, nblocks
+               ! WEST/EAST perimeters (E faces at i=ilo and i=ihi-1)
+               do j = jlo, jhi
+                  if (tmask(ilo ,j,iblk)) F2E(ilo    ,j,iblk) = F2_val
+                  if (tmask(ihi ,j,iblk)) F2E(ihi-1  ,j,iblk) = F2_val
+               end do
+               ! SOUTH/NORTH perimeters (N faces at j=jlo and j=jhi-1)
                do i = ilo, ihi
-                  if ( (tmask(i,j,iblk) .neqv. tmask(i,j+1,iblk)) .and. nmask(i,j,iblk) ) then
-                     F2N(i,j,iblk) = F2_val
-                  endif
-               enddo
-            enddo
-         enddo
+                  if (tmask(i,jlo ,iblk)) F2N(i,jlo   ,iblk) = F2_val
+                  if (tmask(i,jhi ,iblk)) F2N(i,jhi-1 ,iblk) = F2_val
+               end do
+            end do
+            !$OMP END PARALLEL DO
+         else
+            !$OMP PARALLEL DO PRIVATE(iblk,ilo,ihi,jlo,jhi,this_block,i,j) SCHEDULE(runtime)
+            do iblk = 1, nblocks
+               this_block = get_block(blocks_ice(iblk), iblk)
+               ilo = this_block%ilo;  ihi = this_block%ihi
+               jlo = this_block%jlo;  jhi = this_block%jhi
+               ! E faces span T(i,j) (left) and T(i+1,j) (right)
+               do j = jlo, jhi
+                  do i = ilo, ihi-1
+                     ! valid E face?
+                     if (.not. emask(i,j,iblk)) cycle
+                     ! ocean/land on the two T cells flanking this E face
+                     ! Interpret "ocean" as TRUE, "land" as FALSE.
+                     if (use_coast) then
+                        oceL = (coastT(i    ,j) > 0.5d0)
+                        oceR = (coastT(i + 1,j) > 0.5d0)
+                     else
+                        oceL = tmask(i    ,j,iblk)
+                        oceR = tmask(i + 1,j,iblk)
+                     end if
+                     if (oceL .neqv. oceR) F2E(i,j,iblk) = F2_val
+                  end do
+               end do
+               ! N faces span T(i,j) (south) and T(i,j+1) (north)
+               do j = jlo, jhi-1
+                  do i = ilo, ihi
+                     ! valid N face?
+                     if (.not. nmask(i,j,iblk)) cycle
+                     if (use_coast) then
+                        oceS = (coastT(i,j    ) > 0.5d0)
+                        oceN = (coastT(i,j + 1) > 0.5d0)
+                     else
+                        oceS = tmask(i,j    ,iblk)
+                        oceN = tmask(i,j + 1,iblk)
+                     end if
+                     if (oceS .neqv. oceN) F2N(i,j,iblk) = F2_val
+                  end do
+               end do
+            end do
+            !$OMP END PARALLEL DO
+         end if
 
-         write(nu_diag,'(a,2es12.4,a,2es12.4)') 'build_F2: F2E(min,max)=', minval(F2E), maxval(F2E), &
-                                                '  F2N(min,max)=', minval(F2N), maxval(F2N)
+         ! Clean up per-block coastline buffer (if used as per-block-sized field)
+         if (use_coast) then
+            if (allocated(coastT)) deallocate(coastT)
+         end if
+
+         ! --- Diagnostics
+         write(nu_diag,'(a,l1,2a,i0,2a,i0)') 'build_F2: use_coast=', use_coast,  &
+            '  E faces active=', cntE_act, '  E coast-adj=', cntE_adj
+         write(nu_diag,'(a,2(i0,a))') 'build_F2: counts  N faces active=', cntN_act, '  N coast-adj=', cntN_adj, ' '
+         write(nu_diag,'(a,1p,2e12.4,a,1p,2e12.4)') 'build_F2: F2E(min,max)=',  &
+            minval(F2E), maxval(F2E), '  F2N(min,max)=', minval(F2N), maxval(F2N)
          write(nu_diag,'(a,i10,a,i10)') 'build_F2: active faces:  E=', count(F2E>0.0d0), '  N=', count(F2N>0.0d0)
-      end subroutine build_F2_form_factors_box_grid
+
+      end subroutine build_F2_form_factors_cgrid
 
 !=======================================================================
       ! Complex land mask for testing box cases

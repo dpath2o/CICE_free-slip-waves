@@ -53,7 +53,7 @@
       use ice_exit, only: abort_ice
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
       use icepack_intfc, only: icepack_ice_strength, icepack_query_parameters
-      use ice_grid, only: F2E, F2N, build_F2_form_factors_box_grid
+      use ice_grid, only: F2E, F2N, build_F2_form_factors_cgrid
 
       implicit none
       private
@@ -135,7 +135,6 @@
       use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, &
          iceEmask, iceNmask, coastal_drag, create_form_factors
       use ice_dyn_evp1d, only: dyn_evp1d_init
-      use ice_forcing, only: atm_data_type
 
 !allocate c and cd grid var. Follow structucre of eap
       integer (int_kind) :: ierr
@@ -166,7 +165,7 @@
                enddo
             enddo
          enddo
-         call build_F2_form_factors_box_grid(atm_data_type)
+         call build_F2_form_factors_cgrid()
       endif
 
       if (evp_algorithm == "shared_mem_1d" ) then

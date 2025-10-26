@@ -115,7 +115,7 @@
           grid_atm, grid_atm_thrm, grid_atm_dynu, grid_atm_dynv, &
           dxrect, dyrect, dxscale, dyscale, scale_dxdy, &
           lonrefrect, latrefrect, save_ghte_ghtn, &
-          build_F2_form_factors_box_grid, F2E, F2N
+          F2E, F2N
       use ice_dyn_shared, only: &
           ndte, kdyn, revised_evp, yield_curve, &
           evp_algorithm, visc_method,     &
