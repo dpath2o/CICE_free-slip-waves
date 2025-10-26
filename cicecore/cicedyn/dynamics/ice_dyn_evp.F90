@@ -53,7 +53,6 @@
       use ice_exit, only: abort_ice
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
       use icepack_intfc, only: icepack_ice_strength, icepack_query_parameters
-      use ice_grid, only: F2E, F2N, build_F2_form_factors_cgrid
 
       implicit none
       private
@@ -130,7 +129,8 @@
       use ice_blocks, only: get_block, nx_block, ny_block, nghost, block
       use ice_domain_size, only: max_blocks
       use ice_domain, only: nblocks, blocks_ice
-      use ice_grid, only: grid_ice, dyT, dxT, uarear, tmask, G_HTE, G_HTN, dxN, dyE
+      use ice_grid, only: grid_ice, dyT, dxT, uarear, tmask, G_HTE, G_HTN, dxN, dyE, &
+         build_F2_form_factors_cgrid, F2E, F2N
       use ice_calendar, only: dt_dyn
       use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, &
          iceEmask, iceNmask, coastal_drag, create_form_factors
@@ -165,7 +165,10 @@
          !       enddo
          !    enddo
          ! enddo
-         call build_F2_form_factors_cgrid()
+         if (.not. allocated(F2E)) allocate(F2E(nx_block,ny_block,max_blocks))
+         if (.not. allocated(F2N)) allocate(F2N(nx_block,ny_block,max_blocks))
+         call build_F2_form_factors_cgrid(F2E, F2N, test_case=.true.)
+         !call build_F2_form_factors_cgrid()
       endif
 
       if (evp_algorithm == "shared_mem_1d" ) then
@@ -301,7 +304,8 @@
       use ice_grid, only: tmask, umask, umaskCD, nmask, emask, uvm, epm, npm, &
           dxE, dxN, dxT, dxU, dyE, dyN, dyT, dyU, &
           tarear, uarear, earear, narear, grid_average_X2Y, uarea, &
-          grid_ice, grid_atm_dynu, grid_atm_dynv, grid_ocn_dynu, grid_ocn_dynv
+          grid_ice, grid_atm_dynu, grid_atm_dynv, grid_ocn_dynu, grid_ocn_dynv, &
+          F2E, F2N
       use ice_state, only: aice, aiU, vice, vsno, uvel, vvel, uvelN, vvelN, &
           uvelE, vvelE, divu, shear, vort, &
           aice_init, aice0, aicen, vicen, strength
@@ -815,6 +819,48 @@
       !-----------------------------------------------------------------
       if (coastal_drag) then
          if (grid_ice == "C") then
+            ! --- Diagnostics at end of subcycling ---------------------------------
+            nE = count(epm > c0)
+            nN = count(npm > c0)
+            nU = count(uvm > c0)
+            ! E-faces (AT CDP CALL stepu_C)
+            write(nu_diag,9000) 'AT CDP CALL stepu_C  F2E  min/max/avg =', &
+               minval(F2E , mask=epm>c0),  maxval(F2E , mask=epm>c0),  &
+               sum(F2E , mask=epm>c0)/real(max(1,nE),dbl_kind)
+            write(nu_diag,9000) 'AT CDP CALL stepu_C  KuE  min/max/avg =', &
+               minval(KuE , mask=epm>c0),  maxval(KuE , mask=epm>c0),  &
+               sum(KuE , mask=epm>c0)/real(max(1,nE),dbl_kind)
+            write(nu_diag,9000) 'AT CDP CALL stepu_C  KuxE min/max/avg =', &
+               minval(KuxE, mask=epm>c0),  maxval(KuxE, mask=epm>c0),  &
+               sum(KuxE, mask=epm>c0)/real(max(1,nE),dbl_kind)
+            write(nu_diag,9000) 'AT CDP CALL stepu_C  KuyE min/max/avg =', &
+               minval(KuyE, mask=epm>c0),  maxval(KuyE, mask=epm>c0),  &
+               sum(KuyE, mask=epm>c0)/real(max(1,nE),dbl_kind)
+            ! N-faces (AT CDP CALL stepv_C)
+            write(nu_diag,9000) 'AT CDP CALL stepv_C  F2N  min/max/avg =', &
+               minval(F2N , mask=npm>c0),  maxval(F2N , mask=npm>c0),  &
+               sum(F2N , mask=npm>c0)/real(max(1,nN),dbl_kind)
+            write(nu_diag,9000) 'AT CDP CALL stepv_C  KuN  min/max/avg =', &
+               minval(KuN , mask=npm>c0),  maxval(KuN , mask=npm>c0),  &
+               sum(KuN , mask=npm>c0)/real(max(1,nN),dbl_kind)
+            write(nu_diag,9000) 'AT CDP CALL stepv_C  KuxN min/max/avg =', &
+               minval(KuxN, mask=npm>c0),  maxval(KuxN, mask=npm>c0),  &
+               sum(KuxN, mask=npm>c0)/real(max(1,nN),dbl_kind)
+            write(nu_diag,9000) 'AT CDP CALL stepv_C  KuyN min/max/avg =', &
+               minval(KuyN, mask=npm>c0),  maxval(KuyN, mask=npm>c0),  &
+               sum(KuyN, mask=npm>c0)/real(max(1,nN),dbl_kind)
+            ! U-corners (AT CDP CALL stressC_U / U-averaging)
+            write(nu_diag,9000) 'AT CDP CALL stressC_U KuU  min/max/avg =', &
+               minval(KuU , mask=uvm>c0),  maxval(KuU , mask=uvm>c0),  &
+               sum(KuU , mask=uvm>c0)/real(max(1,nU),dbl_kind)
+            write(nu_diag,9000) 'AT CDP CALL stressC_U KuxU min/max/avg =', &
+               minval(KuxU, mask=uvm>c0),  maxval(KuxU, mask=uvm>c0),  &
+               sum(KuxU, mask=uvm>c0)/real(max(1,nU),dbl_kind)
+            write(nu_diag,9000) 'AT CDP CALL stressC_U KuyU min/max/avg =', &
+               minval(KuyU, mask=uvm>c0),  maxval(KuyU, mask=uvm>c0),  &
+               sum(KuyU, mask=uvm>c0)/real(max(1,nU),dbl_kind)
+            9000 format(a,3(1pe16.8,1x))
+            ! ----------------------------------------------------------------------
             !$OMP PARALLEL DO PRIVATE(iblk) SCHEDULE(runtime)
             do iblk = 1, nblocks
                call coastal_drag_stress_factor(nx_block          , ny_block,         &
@@ -1083,7 +1129,6 @@
                   minval(KuyU, mask=uvm>c0),  maxval(KuyU, mask=uvm>c0),  &
                   sum(KuyU, mask=uvm>c0)/real(max(1,nU),dbl_kind)
             end if
-            9000 format(a,3(1pe16.8,1x))
             ! ----------------------------------------------------------------------
 
             ! calls ice_haloUpdate, controls bundles and masks

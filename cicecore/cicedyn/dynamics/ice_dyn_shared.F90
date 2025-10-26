@@ -158,8 +158,6 @@
          Cs, &  ! static function coefficient; Liu et al. (2022) eq.13; 1.0*10^{−4} m/s^2
          u0     ! residual velocity for coastal drag stress (and seabed stress) (m/s)
 
-
-
       interface strain_rates_T
          module procedure strain_rates_Tdt
          module procedure strain_rates_Tdtsd

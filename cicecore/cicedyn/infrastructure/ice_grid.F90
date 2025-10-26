@@ -2608,7 +2608,9 @@
 
       end subroutine rectgrid_scale_dxdy
 
-subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_case)
+
+!=======================================================================
+subroutine build_F2_form_factors_cgrid(F2E, F2N, coast_file, coast_var, F2_value, test_case)
    use ice_kinds_mod
    use ice_blocks       , only: get_block, nx_block, ny_block, block
    use ice_domain       , only: nblocks, blocks_ice
@@ -2623,6 +2625,10 @@ subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_cas
    character(len=*),         intent(in), optional :: coast_var   ! var name in coast_file
    real   (kind=dbl_kind),   intent(in), optional :: F2_value    ! default 0.25
    logical(kind=log_kind),   intent(in), optional :: test_case   ! if true and no coast_file, treat perimeter as coastline
+
+   ! ---- REQUIRED outputs (already allocated by caller) ----
+   real(kind=dbl_kind), intent(inout) :: F2E(nx_block,ny_block,max_blocks)
+   real(kind=dbl_kind), intent(inout) :: F2N(nx_block,ny_block,max_blocks)
 
    ! ----- locals -----
    type(block)               :: this_block
@@ -2647,8 +2653,8 @@ subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_cas
    want_perimeter = .false.; if (present(test_case)) want_perimeter = test_case
 
    ! ----- allocate/clear outputs -----
-   if (.not. allocated(F2E)) allocate(F2E(nx_block,ny_block,max_blocks))
-   if (.not. allocated(F2N)) allocate(F2N(nx_block,ny_block,max_blocks))
+   ! if (.not. allocated(F2E)) allocate(F2E(nx_block,ny_block,max_blocks))
+   ! if (.not. allocated(F2N)) allocate(F2N(nx_block,ny_block,max_blocks))
    F2E = 0.0d0
    F2N = 0.0d0
 
@@ -2766,6 +2772,18 @@ subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_cas
    if (use_coast) then
       if (allocated(coastT)) deallocate(coastT)
    end if
+
+   cntE_act = 0
+   cntN_act = 0
+   !$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi) REDUCTION(+:cntE_act,cntN_act)
+   do iblk = 1, nblocks
+      this_block = get_block(blocks_ice(iblk), iblk)
+      ilo = this_block%ilo;  ihi = this_block%ihi
+      jlo = this_block%jlo;  jhi = this_block%jhi
+      cntE_act = cntE_act + (ihi-ilo)  * (jhi-jlo+1)   ! E faces per block
+      cntN_act = cntN_act + (ihi-ilo+1)* (jhi-jlo)     ! N faces per block
+   end do
+   !$OMP END PARALLEL DO
 
    ! ----- diagnostics -----
    write(nu_diag,'(a,l1,a,i10,a,i10)') 'build_F2: use_coast=', use_coast,  &
