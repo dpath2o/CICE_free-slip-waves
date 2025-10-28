@@ -114,8 +114,8 @@
           grid_ocn, grid_ocn_thrm, grid_ocn_dynu, grid_ocn_dynv, &
           grid_atm, grid_atm_thrm, grid_atm_dynu, grid_atm_dynv, &
           dxrect, dyrect, dxscale, dyscale, scale_dxdy, &
-          lonrefrect, latrefrect, save_ghte_ghtn, &
-          F2E, F2N
+         lonrefrect, latrefrect, save_ghte_ghtn!, &
+         !  F2E, F2N
       use ice_dyn_shared, only: &
           ndte, kdyn, revised_evp, yield_curve, &
           evp_algorithm, visc_method,     &

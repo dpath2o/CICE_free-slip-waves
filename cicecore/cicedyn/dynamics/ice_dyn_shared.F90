@@ -15,6 +15,7 @@
       use ice_constants, only: omega, spval_dbl, p01, p001, p5
       use ice_blocks, only: nx_block, ny_block
       use ice_domain_size, only: max_blocks
+      use ice_grid, only: grid_ice
       use ice_fileunits, only: nu_diag
       use ice_exit, only: abort_ice
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
@@ -64,9 +65,9 @@
          boundary_condition       ! 'no_slip' (Dirchlet) or 'free_slip' (Neumann); boundary conditions
 
       real (kind=dbl_kind), parameter, public :: &
-         !u0    = 5e-5_dbl_kind, & ! residual velocity for seabed stress (m/s)
-         cosw  = c1           , & ! cos(ocean turning angle)  ! turning angle = 0
-         sinw  = c0               ! sin(ocean turning angle)  ! turning angle = 0
+         ! u0     = 5e-5_dbl_kind, & ! residual velocity for seabed stress (m/s)
+         cosw   = c1           , & ! cos(ocean turning angle)  ! turning angle = 0
+         sinw   = c0               ! sin(ocean turning angle)  ! turning angle = 0
 
       real (kind=dbl_kind), public :: &
          revp        , & ! 0 for classic EVP, 1 for revised EVP
@@ -148,11 +149,10 @@
          create_form_factors ! if true, create the coastal form factors using the coastline
 
       ! real(kind=dbl_kind), dimension(:,:,:), allocatable, public :: &
-      !    F2_loc     ! coastal form factors
-      
-      real(kind=dbl_kind), dimension(:,:,:), allocatable, public :: &
-         F2E(:,:,:), F2N(:,:,:)
-      logical(kind=log_kind),       public, save :: cdp_ff_built = .false._log_kind
+      !    F2_loc     ! coastal form factors      
+      ! real(kind=dbl_kind), dimension(:,:,:), allocatable, public :: &
+      !    F2E(:,:,:), F2N(:,:,:)
+      ! logical(kind=log_kind),       public, save :: cdp_ff_built = .false._log_kind
 
       ! character (len=char_len), public :: &
       !    coastline_file       ! NetCDF of coastline
@@ -1576,37 +1576,94 @@
                                             icellU  ,           &
                                             indxUi  , indxUj  , &
                                             imass   ,           &
-                                            Ku      ,           & 
-                                            F2_loc              ) 
-      character(len=*), parameter :: subname = '(coastal_drag_stress_factor)'
-      ! blocks:
-      integer (kind=int_kind), intent(in) :: &
-         nx_block, ny_block, & ! block dimensions
-         icellU                ! no. of cells where ice[uen]mask = 1
-      ! loop indeces
-      integer (kind=int_kind) :: i, j, ij
-      ! directional (grid) indeces:
-      integer (kind=int_kind), dimension (nx_block*ny_block), intent(in) :: &
-         indxUi, & ! compressed index in i-direction
-         indxUj    ! compressed index in j-direction
-      ! sea ice variables: 
-      real (kind=dbl_kind), dimension (nx_block,ny_block), intent(in) :: &
-         imass, & ! total mass of sea ice (includes snow) at E or N grid points
-         F2_loc       ! coastline form factor -- computed offline; (N/m^2)
-      ! compute Ku at each grid point 
-      ! (away from the coast it should go to zero as F2_loc goes to zero)
-      real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
-         Ku       ! coastal drag stress factor (N/m^2)
-      ! (optional but handy: print once on master)
-      if (my_task == master_task) then
-          write(nu_diag, '(a,2f12.5)') 'ice_dyn_shared.F90 F2_loc(min,max)=', minval(F2_loc), maxval(F2_loc)
-      endif
-      do ij = 1, icellU
-         i       = indxUi(ij)
-         j       = indxUj(ij)
-         Ku(i,j) = imass(i,j) * F2_loc(i,j) * Cs
-      enddo ! ij
+                                            Ku      ,           &
+                                            F2_loc)
+         use ice_kinds_mod
+         use ice_fileunits  , only: nu_diag
+         use ice_communicate, only: my_task, master_task
+
+         implicit none
+
+         integer (kind=int_kind), intent(in)    :: nx_block, ny_block, icellU
+         integer (kind=int_kind)                :: i, j, ij, nset
+         integer (kind=int_kind), intent(in)    :: indxUi(nx_block*ny_block), indxUj(nx_block*ny_block)
+         real    (kind=dbl_kind), intent(in)    :: imass(nx_block,ny_block)
+         real    (kind=dbl_kind), intent(inout) :: Ku   (nx_block,ny_block)
+         real    (kind=dbl_kind), intent(in)    :: F2_loc(nx_block,ny_block)
+
+         ! define state
+         Ku   = c0
+         nset = 0
+
+         ! gauard 
+         if (icellU <= 0) then
+            if (my_task==master_task) write(nu_diag,'(a)') 'CDP: icellU==0; Ku unchanged.'
+            return
+         end if
+         if (my_task==master_task) then
+            write(nu_diag,'(a,1pe12.4)') 'CDP: Cs =', Cs
+            write(nu_diag,'(a,2(1pe12.4,1x))') 'CDP: F2_loc(mask) min/max =', &
+               minval(F2_loc, mask=F2_loc>c0), maxval(F2_loc, mask=F2_loc>c0)
+            write(nu_diag,'(a,2(1pe12.4,1x))') 'CDP: imass@F2>0 min/max =', &
+               minval(imass , mask=F2_loc>c0), maxval(imass , mask=F2_loc>c0)
+            write(nu_diag,'(a,i0)') 'CDP: icellU =', icellU
+         end if
+
+         do ij = 1, icellU
+            i = indxUi(ij);  j = indxUj(ij)
+            if (F2_loc(i,j) > c0) then
+               Ku(i,j) = imass(i,j) * F2_loc(i,j) * Cs
+               if (Ku(i,j) /= c0) nset = nset + 1
+            end if
+         end do
+
+         if (my_task==master_task) then
+            write(nu_diag,'(a,i0)') 'CDP: Ku nonzero count =', nset
+            if (nset > 0) then
+               write(nu_diag,'(a,2(1pe12.4,1x),a,1pe12.4)') 'CDP: Ku@F2>0 min/max/avg =', &
+               minval(Ku, mask=F2_loc>c0), maxval(Ku, mask=F2_loc>c0), ' ', &
+               sum(Ku, mask=F2_loc>c0)/real(nset,dbl_kind)
+            else
+               write(nu_diag,'(a)') 'CDP: Ku all zero on F2>0.'
+            end if
+         end if
       end subroutine coastal_drag_stress_factor
+
+      ! subroutine coastal_drag_stress_factor(nx_block, ny_block, &
+      !                                       icellU  ,           &
+      !                                       indxUi  , indxUj  , &
+      !                                       imass   ,           &
+      !                                       Ku      ,           & 
+      !                                       F2_loc              ) 
+      ! character(len=*), parameter :: subname = '(coastal_drag_stress_factor)'
+      ! ! blocks:
+      ! integer (kind=int_kind), intent(in) :: &
+      !    nx_block, ny_block, & ! block dimensions
+      !    icellU                ! no. of cells where ice[uen]mask = 1
+      ! ! loop indeces
+      ! integer (kind=int_kind) :: i, j, ij
+      ! ! directional (grid) indeces:
+      ! integer (kind=int_kind), dimension (nx_block*ny_block), intent(in) :: &
+      !    indxUi, & ! compressed index in i-direction
+      !    indxUj    ! compressed index in j-direction
+      ! ! sea ice variables: 
+      ! real (kind=dbl_kind), dimension (nx_block,ny_block), intent(in) :: &
+      !    imass, & ! total mass of sea ice (includes snow) at E or N grid points
+      !    F2_loc       ! coastline form factor -- computed offline; (N/m^2)
+      ! ! compute Ku at each grid point 
+      ! ! (away from the coast it should go to zero as F2_loc goes to zero)
+      ! real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
+      !    Ku       ! coastal drag stress factor (N/m^2)
+      ! ! (optional but handy: print once on master)
+      ! if (my_task == master_task) then
+      !     write(nu_diag, '(a,2f12.5)') 'ice_dyn_shared.F90 F2_loc(min,max)=', minval(F2_loc), maxval(F2_loc)
+      ! endif
+      ! do ij = 1, icellU
+      !    i       = indxUi(ij)
+      !    j       = indxUj(ij)
+      !    Ku(i,j) = imass(i,j) * F2_loc(i,j) * Cs
+      ! enddo ! ij
+      ! end subroutine coastal_drag_stress_factor
 
 !=======================================================================
 ! Computes seabed (basal) stress factor TbU (landfast ice) based on mean
@@ -2768,20 +2825,6 @@
             ! shear = 2 e_12
             shearU(i,j) =  dxU(i,j) * (uEijp1 - uEij) - uvelU(i,j) * (dxE(i  ,j+1) - dxE(i,j))  &
                         +  dyU(i,j) * (vNip1j - vNij) - vvelU(i,j) * (dyN(i+1,j  ) - dyN(i,j))
-         ! ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
-         ! if (ksub == ndte) then
-         !    ! U(i,j) is the NE corner of T(i,j). It is "coastal" if any of the
-         !    ! four faces meeting at the corner are land (mask==0).
-         !    ! Adjacent faces around U(i,j): E(i,j), E(i,j-1), N(i,j), N(i-1,j)
-         !    if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
-         !       if ( (epm(i  ,j  ) == c0) .or. (epm(i  ,j-1) == c0) .or. &
-         !            (npm(i  ,j  ) == c0) .or. (npm(i-1,j  ) == c0) ) then
-         !          !$OMP CRITICAL (IO_DIAG)
-         !          write(nu_diag,'(a,2i6,1p,e16.8)') 'free-slip U-coast shearU  (i,j)=', i, j, shearU(i,j)
-         !          !$OMP END CRITICAL (IO_DIAG)
-         !       end if
-         !    end if
-         ! end if
       enddo
       if (ksub == ndte) call flush(nu_diag)
       end subroutine strain_rates_U_free_slip

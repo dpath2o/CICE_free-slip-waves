@@ -244,6 +244,8 @@
          umaskCD  (nx_block,ny_block,max_blocks), & ! land/boundary mask, velocity (U-cell)
          nmask    (nx_block,ny_block,max_blocks), & ! land/boundary mask (N-cell)
          emask    (nx_block,ny_block,max_blocks), & ! land/boundary mask (E-cell)
+         F2N      (nx_block,ny_block,max_blocks), & ! coastal drag form factors (N-cell)
+         F2E      (nx_block,ny_block,max_blocks), & ! coastal drag form factors (E-cell)
          opmask   (nx_block,ny_block,max_blocks), & ! land/boundary orphan mask (atm ocean/ice cell)
          lmask_n  (nx_block,ny_block,max_blocks), & ! northern hemisphere mask
          lmask_s  (nx_block,ny_block,max_blocks), & ! southern hemisphere mask
@@ -2608,7 +2610,6 @@
 
       end subroutine rectgrid_scale_dxdy
 
-
 !=======================================================================
 subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_case)
    use ice_kinds_mod
@@ -2616,7 +2617,6 @@ subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_cas
    use ice_domain     , only: nblocks, blocks_ice
    use ice_domain_size, only: max_blocks
    use ice_fileunits  , only: nu_diag
-   use ice_dyn_shared , only: F2E, F2N, cdp_ff_built 
 #ifdef _NETCDF
    use netcdf
 #endif
@@ -2626,10 +2626,6 @@ subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_cas
    character(len=*),         intent(in), optional :: coast_var   ! var name in coast_file
    real   (kind=dbl_kind),   intent(in), optional :: F2_value    ! default 0.25
    logical(kind=log_kind),   intent(in), optional :: test_case   ! if true and no coast_file, treat perimeter as coastline
-
-   ! ! ---- REQUIRED outputs (already allocated by caller) ----
-   ! real(kind=dbl_kind), intent(out) :: F2E(nx_block,ny_block,max_blocks)
-   ! real(kind=dbl_kind), intent(out) :: F2N(nx_block,ny_block,max_blocks)
 
    ! ----- locals -----
    type(block)               :: this_block
@@ -2654,10 +2650,8 @@ subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_cas
    want_perimeter = .false.; if (present(test_case)) want_perimeter = test_case
 
    ! ----- allocate/clear outputs -----
-   if (.not. allocated(F2E)) allocate(F2E(nx_block,ny_block,max_blocks))
-   if (.not. allocated(F2N)) allocate(F2N(nx_block,ny_block,max_blocks))
-   F2E = 0.0d0
-   F2N = 0.0d0
+   F2E = c0
+   F2N = c0
 
    ! ----- choose coastline source -----
    use_coast = .false.
@@ -2768,8 +2762,6 @@ subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_cas
          setN = count(F2N > 0.0d0)
       end if
    end if
-
-   cdp_ff_built = .true._log_kind
 
    ! ----- cleanup -----
    if (use_coast) then
