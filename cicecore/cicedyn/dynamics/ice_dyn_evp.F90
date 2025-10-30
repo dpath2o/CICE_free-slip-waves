@@ -274,14 +274,11 @@
       use ice_flux, only: rdg_conv, rdg_shear, strairxT, strairyT, &
           strairxU, strairyU, uocn, vocn, ss_tltx, ss_tlty, fmU, &
           strtltxU, strtltyU, strocnxU, strocnyU, strintxU, strintyU, taubxU, taubyU, &
-          strax, stray, &
-          TbU, KuxU, KuyU, KuU, hwater, &
+          strax, stray, hwater, TbU, &
           strairxN, strairyN, fmN, &
-          strtltxN, strtltyN, strocnxN, strocnyN, strintxN, strintyN, taubxN, taubyN, &
-          TbN, KuxN, KuyN, KuN, &
+          strtltxN, strtltyN, strocnxN, strocnyN, strintxN, strintyN, taubxN, taubyN, TbN, &
           strairxE, strairyE, fmE, &
-          strtltxE, strtltyE, strocnxE, strocnyE, strintxE, strintyE, taubxE, taubyE, &
-          TbE, KuxE, KuyE, KuE, &
+          strtltxE, strtltyE, strocnxE, strocnyE, strintxE, strintyE, taubxE, taubyE, TbE, &
           stressp_1, stressp_2, stressp_3, stressp_4, &
           stressm_1, stressm_2, stressm_3, stressm_4, &
           stress12_1, stress12_2, stress12_3, stress12_4, &
@@ -301,7 +298,8 @@
           DminTarea, visc_method, deformations, deformationsC_T, deformationsCD_T, &
           strain_rates_U_no_slip, strain_rates_U_free_slip, dxhy, dyhx, cxp, cyp, cxm, cym, &
           iceTmask, iceUmask, iceEmask, iceNmask, &
-          dyn_haloUpdate, fld2, fld3, fld4
+          dyn_haloUpdate, fld2, fld3, fld4, &
+          KuxU, KuyU, KuU, KuxN, KuyN, KuN, KuxE, KuyE, KuE
       use ice_dyn_evp1d, only: dyn_evp1d_run
 
       real (kind=dbl_kind), intent(in) :: &
@@ -795,23 +793,8 @@
       !-----------------------------------------------------------------
       ! coastal drag function KuE/N
       !-----------------------------------------------------------------
-      
       if (coastal_drag) then
          if (grid_ice == "C") then
-            nE = count(F2E /= c0)
-            nN = count(F2N /= c0)
-            write(nu_diag,9000) 'before CDP F2E min/max/avg =', &
-               minval(F2E, mask=F2E/=c0), maxval(F2E, mask=F2E/=c0), &
-               sum(F2E, mask=F2E/=c0)/real(max(1,nE), dbl_kind)
-            write(nu_diag,9000) 'before CDP F2N min/max/avg =', &
-               minval(F2N, mask=F2N/=c0), maxval(F2N, mask=F2N/=c0), &
-               sum(F2N, mask=F2N/=c0)/real(max(1,nN), dbl_kind)
-            write(nu_diag,9000) 'before CDP CALL KuE min/max/avg =', &
-               minval(KuE, mask=KuE/=c0), maxval(KuE, mask=KuE/=c0), &
-               sum(KuE, mask=KuE/=c0)/real(max(1,nE), dbl_kind)
-            write(nu_diag,9000) 'before CDP CALL KuN min/max/avg =', &
-               minval(KuN, mask=F2N/=c0), maxval(KuN, mask=KuN/=c0), &
-               sum(KuN, mask=KuN/=c0)/real(max(1,nN), dbl_kind)
             9000 format(a,3(1pe16.8,1x))
             ! ----------------------------------------------------------------------
             !$OMP PARALLEL DO PRIVATE(iblk) SCHEDULE(runtime)
@@ -830,18 +813,6 @@
                                                F2N(:,:,iblk)                         )
             enddo
             !$OMP END PARALLEL DO
-            write(nu_diag,9000) 'after CDP CALL F2E min/max/avg =', &
-               minval(F2E, mask=F2E/=c0), maxval(F2E, mask=F2E/=c0), &
-               sum(F2E, mask=F2E/=c0)/real(max(1,nE), dbl_kind)
-            write(nu_diag,9000) 'after CDP CALL F2N min/max/avg =', &
-               minval(F2N, mask=F2N/=c0), maxval(F2N, mask=F2N/=c0), &
-               sum(F2N, mask=F2N/=c0)/real(max(1,nN), dbl_kind)
-            write(nu_diag,9000) 'after CDP CALL KuE min/max/avg =', &
-               minval(KuE, mask=KuE/=c0), maxval(KuE, mask=KuE/=c0), &
-               sum(KuE, mask=KuE/=c0)/real(max(1,nE), dbl_kind)
-            write(nu_diag,9000) 'after CDP CALL KuN min/max/avg =', &
-               minval(KuN, mask=KuN/=c0), maxval(KuN, mask=KuN/=c0), &
-               sum(KuN, mask=KuN/=c0)/real(max(1,nN), dbl_kind)
          endif
       endif
 
@@ -1160,6 +1131,8 @@
 
             ! --- Diagnostics at end of subcycling ---------------------------------
             if (ksub == ndte) then
+               nE = count(F2E /= c0)
+               nN = count(F2N /= c0)
                write(nu_diag,9000) 'after stepu/v_C calls F2E min/max/avg =', &
                   minval(F2E, mask=F2E/=c0), maxval(F2E, mask=F2E/=c0), &
                   sum(F2E, mask=F2E/=c0)/real(max(1,nE), dbl_kind)

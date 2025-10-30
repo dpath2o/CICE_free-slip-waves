@@ -2199,7 +2199,7 @@
                               new_month
       use ice_dyn_eap, only: a11, a12, e11, e12, e22, s11, s12, s22, &
           yieldstress11, yieldstress12, yieldstress22
-      use ice_dyn_shared, only: kdyn, principal_stress
+      use ice_dyn_shared, only: kdyn, principal_stress, KuxN, KuyN, KuxE, KuyE, KuxU, KuyU, KuN, KuE, KuU
       use ice_flux, only: fsw, flw, fsnow, frain, sst, sss, uocn, vocn, &
           frzmlt_init, scale_factor, fswabs, fswthru, alvdr, alvdf, alidr, alidf, &
           albice, albsno, albpnd, coszen, flat, fsens, flwout, evap, evaps, evapi, &
@@ -2219,8 +2219,7 @@
           stressp_2, stressp_3, stressp_4, sig1, sig2, sigP, &
           mlt_onset, frz_onset, dagedtt, dagedtd, fswint_ai, keffn_top, &
           snowfrac, alvdr_ai, alvdf_ai, alidr_ai, alidf_ai, update_ocn_f, &
-          cpl_frazil, &
-          KuxN, KuyN, KuxE, KuyE
+          cpl_frazil!, &
       use ice_arrays_column, only: snowfracn, Cdn_atm
       use ice_history_shared ! almost everything
       use ice_history_write, only: ice_write_hist
