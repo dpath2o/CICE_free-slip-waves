@@ -295,7 +295,7 @@
     trestore        =  90
     precip_units    = 'mm_per_month'
     default_season  = 'winter'
-    atm_data_type   = 'uniform_east'
+    atm_data_type   = 'uniform_northeast'
     atm_data_version = '_undef'
     ocn_data_type   = 'calm'
     bgc_data_type   = 'default'

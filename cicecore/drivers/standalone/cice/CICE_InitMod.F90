@@ -79,8 +79,7 @@
       use ice_flux, only: init_coupler_flux, init_history_therm, &
           init_history_dyn, init_flux_atm, init_flux_ocn, alloc_flux
       use ice_forcing, only: init_forcing_ocn, init_forcing_atmo, &
-          get_forcing_atmo, get_forcing_ocn, get_wave_spec, init_snowtable, &
-          atm_data_type
+          get_forcing_atmo, get_forcing_ocn, get_wave_spec, init_snowtable
       use ice_forcing_bgc, only: get_forcing_bgc, get_atm_bgc, &
           faero_default, alloc_forcing_bgc, fiso_default
       use ice_grid, only: init_grid1, init_grid2, alloc_grid, dealloc_grid
@@ -132,9 +131,6 @@
       call init_zbgc            ! vertical biogeochemistry initialization
       call init_calendar        ! initialize some calendar stuff
       call init_hist (dt)       ! initialize output history file
-
-      !call build_F2_form_factors_box_grid(atm_data_type) ! initialise/build form factors at start of CICE
-                                                         ! dpath2o: this will need to go into couplers as well
 
       if (kdyn == 1) then
          call init_evp

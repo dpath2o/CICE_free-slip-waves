@@ -154,7 +154,7 @@
       !------------------------------------------------
       ! coastal drag masking and form factor construction
       if (coastal_drag .and. create_form_factors) then
-         call build_F2_form_factors_cgrid(test_case=.true.)   ! perimeter fallback for your 12×12 ocean box
+         call build_F2_form_factors_cgrid(test_case=.true.)
       endif
 
       if (evp_algorithm == "shared_mem_1d" ) then
@@ -350,7 +350,7 @@
 
       character(len=*), parameter :: subname = '(evp)'
 
-      integer (kind=int_kind) :: nE, nN, nU
+      integer (kind=int_kind) :: nE, nN, nU, nKux, nKuy
 
       call ice_timer_start(timer_dynamics) ! dynamics
 
@@ -800,14 +800,14 @@
             !$OMP PARALLEL DO PRIVATE(iblk) SCHEDULE(runtime)
             do iblk = 1, nblocks
                call coastal_drag_stress_factor(nx_block          , ny_block,         &
-                                               icellE  (iblk)    ,                   &
-                                               indxEi  (:,iblk)  , indxEj(:,iblk),   &
+                                               ! icellE  (iblk)    ,                   &
+                                               ! indxEi  (:,iblk)  , indxEj(:,iblk),   &
                                                emass   (:,:,iblk),                   &
                                                KuE     (:,:,iblk),                   &
                                                F2E(:,:,iblk)                         )
                call coastal_drag_stress_factor(nx_block          , ny_block,         &
-                                               icellN  (iblk)    ,                   &
-                                               indxNi  (:,iblk)  , indxNj(:,iblk),   &
+                                               ! icellN  (iblk)    ,                   &
+                                               ! indxNi  (:,iblk)  , indxNj(:,iblk),   &
                                                nmass   (:,:,iblk),                   &
                                                KuN     (:,:,iblk),                   &
                                                F2N(:,:,iblk)                         )
@@ -1112,7 +1112,8 @@
                               uvelE_init(:,:,iblk),                       &
                               uvelE     (:,:,iblk), vvelE     (:,:,iblk), &
                               TbE       (:,:,iblk),                       &
-                              KuxE      (:,:,iblk), KuE       (:,:,iblk))
+                              KuxE      (:,:,iblk), KuyE      (:,:,iblk), &
+                              KuE       (:,:,iblk))
 
                 call stepv_C (nx_block,             ny_block,             & ! v, N point
                               icellN        (iblk), Cdn_ocnN  (:,:,iblk), &
@@ -1125,7 +1126,8 @@
                               vvelN_init(:,:,iblk),                       &
                               uvelN     (:,:,iblk), vvelN     (:,:,iblk), &
                               TbN       (:,:,iblk),                       &
-                              KuyN      (:,:,iblk), KuN       (:,:,iblk))
+                              KuxN      (:,:,iblk), KuyN      (:,:,iblk), &
+                              KuN       (:,:,iblk))
             enddo
             !$OMP END PARALLEL DO
 
@@ -1133,6 +1135,8 @@
             if (ksub == ndte) then
                nE = count(F2E /= c0)
                nN = count(F2N /= c0)
+               nKux = count(KuxE /= c0)
+               nKuy = count(KuyN /= c0)
                write(nu_diag,9000) 'after stepu/v_C calls F2E min/max/avg =', &
                   minval(F2E, mask=F2E/=c0), maxval(F2E, mask=F2E/=c0), &
                   sum(F2E, mask=F2E/=c0)/real(max(1,nE), dbl_kind)
@@ -1145,12 +1149,21 @@
                write(nu_diag,9000) 'after stepu/v_C calls KuN min/max/avg =', &
                   minval(KuN, mask=KuN/=c0), maxval(KuN, mask=KuN/=c0), &
                   sum(KuN, mask=KuN/=c0)/real(max(1,nN), dbl_kind)
+               if (nKux > 0) then
                write(nu_diag,9000) 'after stepu/v_C calls KuxE min/max/avg =', &
-                  minval(KuxE, mask=KuxE/=c0), maxval(KuxE, mask=KuxE/=c0), &
-                  sum(KuxE, mask=KuxE/=c0)/real(max(1,nE), dbl_kind)
+                     minval(KuxE, mask=KuxE/=c0), maxval(KuxE, mask=KuxE/=c0), &
+                     sum(KuxE, mask=KuxE/=c0)/real(nKux, dbl_kind)
+               else
+               write(nu_diag,'(a)') 'after stepu/v_C calls KuxE: all zero.'
+               end if
+
+               if (nKuy > 0) then
                write(nu_diag,9000) 'after stepu/v_C calls KuyN min/max/avg =', &
-                  minval(KuyN, mask=KuyN/=c0), maxval(KuyN, mask=KuyN/=c0), &
-                  sum(KuyN, mask=KuyN/=c0)/real(max(1,nN), dbl_kind)
+                     minval(KuyN, mask=KuyN/=c0), maxval(KuyN, mask=KuyN/=c0), &
+                     sum(KuyN, mask=KuyN/=c0)/real(nKuy, dbl_kind)
+               else
+               write(nu_diag,'(a)') 'after stepu/v_C calls KuyN: all zero.'
+               end if
             end if
             ! ----------------------------------------------------------------------
 

@@ -247,7 +247,7 @@
          !---------------------------------------------------------
          ! Allocate and initialise coastal drag coefficient fields
          !---------------------------------------------------------
-         if (coastal_drag) then
+         !if (coastal_drag) then
             allocate( &
                      KuU  (nx_block,ny_block,max_blocks), &
                      KuE  (nx_block,ny_block,max_blocks), &
@@ -260,7 +260,7 @@
                      KuyN (nx_block,ny_block,max_blocks), &
                      stat=ierr)
             if (ierr/=0) call abort_ice(subname//': Out of memory')  
-         end if
+         !end if
       end if
 
       end subroutine alloc_dyn_shared
@@ -385,7 +385,7 @@
             stresspU  (i,j,iblk) = c0
             stressmU  (i,j,iblk) = c0
             stress12U (i,j,iblk) = c0
-            if (coastal_drag) then
+            ! if (coastal_drag) then
                KuU  (i,j,iblk) = c0
                KuE  (i,j,iblk) = c0
                KuN  (i,j,iblk) = c0
@@ -395,7 +395,7 @@
                KuyE (i,j,iblk) = c0
                KuxN (i,j,iblk) = c0
                KuyN (i,j,iblk) = c0            
-            end if
+            !end if
          endif
 
          if (kdyn == 1) then
@@ -1115,7 +1115,8 @@
                           uvel_init,            &
                           uvel,       vvel,     &
                           Tb,                   &
-                          Kux,        Ku        )
+                          Kux,        Kuy,      &
+                          Ku        )
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block, & ! block dimensions
@@ -1143,7 +1144,7 @@
       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
          uvel    , & ! x-component of velocity (m/s)
          taubx   , & ! seabed stress, x-direction (N/m^2)
-         Kux         ! coastal (lateral) stress, x-direction (N/m^2)
+         Kux, Kuy    ! coastal (lateral) stress, x/y-directions (N/m^2)
 
       ! local variables
 
@@ -1198,9 +1199,11 @@
          taubx(i,j) = -uvel(i,j)*Cb
 
          ! calculate the coastal (lateral) drag stress component for output
-         Kux(i,j) = -uvel(i,j)*Cl
+         Kux(i,j) = -uvel(i,j)*Cl   ! normal-to-wall at E
+         Kuy(i,j) = -vvel(i,j)*Cl   ! tangential-to-wall at E
 
       enddo                     ! ij
+
       end subroutine stepu_C
 
 !=======================================================================
@@ -1217,7 +1220,8 @@
                           vvel_init,            &
                           uvel,       vvel,     &
                           Tb,                   &
-                          Kuy,         Ku       )
+                          Kux,        Kuy,      &
+                          Ku       )
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block, & ! block dimensions
@@ -1245,7 +1249,7 @@
       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
          vvel    , & ! y-component of velocity (m/s)
          tauby   , & ! seabed stress, y-direction (N/m^2)
-         Kuy         ! coastal (lateral) stress, y-direction (N/m^2)
+         Kux, Kuy    ! coastal (lateral) stress, x/y-directions (N/m^2)
 
       ! local variables
 
@@ -1300,7 +1304,8 @@
          tauby(i,j) = -vvel(i,j)*Cb
 
          ! calculate the coastal (lateral) drag stress component for output
-         Kuy(i,j) = -vvel(i,j)*Cl
+         Kux(i,j) = -uvel(i,j)*Cl   ! tangential-to-wall at N 
+         Kuy(i,j) = -vvel(i,j)*Cl   ! normal-to-wall at N
 
       enddo                     ! ij
 
@@ -1401,8 +1406,8 @@
 !
 ! authors: dpath2o
       subroutine coastal_drag_stress_factor(nx_block, ny_block, &
-                                            icell   ,           &
-                                            ind_i   , ind_j   , &
+                                            ! icell   ,           &
+                                            ! ind_i   , ind_j   , &
                                             imass   ,           &
                                             Ku      ,           &
                                             F2)
@@ -1413,28 +1418,28 @@
          implicit none
 
          integer(kind=int_kind), intent(in) :: &
-            nx_block, ny_block, & ! block dimensions
-            icell                 ! total count when ice[E|N]mask is true
+            nx_block, ny_block!, & ! block dimensions
+            !icell                 ! total count when ice[E|N]mask is true
 
-         integer(kind=int_kind), dimension(nx_block*ny_block), intent(in) :: &
-            ind_i, & ! compressed index in i-direction
-            ind_j    ! compressed index in j-direction
+         ! integer(kind=int_kind), dimension(nx_block*ny_block), intent(in) :: &
+         !    ind_i, & ! compressed index in i-direction
+         !    ind_j    ! compressed index in j-direction
 
-         real(kind=dbl_kind), dimension(nx_block*ny_block), intent(in) :: &
+         real(kind=dbl_kind), dimension(nx_block,ny_block), intent(in) :: &
             imass , & ! mass of n-cell/dt (kg/m^2 s)
             F2        ! coastline form factor (drag coefficient); unitless
 
-         real(kind=dbl_kind), dimension(nx_block*ny_block), intent(inout) :: &
+         real(kind=dbl_kind), dimension(nx_block,ny_block), intent(inout) :: &
             Ku ! coastline stress form factor; kg/m^2 * _ * m/s^2 = kg/(m*s^2) = Pascal (Pa)
 
-         integer (kind=int_kind) :: &
-            i, j, ij ! subroutine indices
+         ! integer (kind=int_kind) :: &
+         !    i, j, ij ! subroutine indices
 
-         ! gauard  
-         if (icell <= 0) then
-            if (my_task==master_task) write(nu_diag,'(a)') 'CDP: icell==0; Ku unchanged.'
-            return
-         end if
+         ! ! gauard  
+         ! if (icell <= 0) then
+         !    if (my_task==master_task) write(nu_diag,'(a)') 'CDP: icell==0; Ku unchanged.'
+         !    return
+         ! end if
 
          ! subroutine diagnostics
          if (my_task==master_task) then
@@ -1443,21 +1448,22 @@
                minval(F2, mask=F2>c0), maxval(F2, mask=F2>c0)
             write(nu_diag,'(a,2(1pe12.4,1x))') 'CDP: imass@F2>0 min/max =', &
                minval(imass , mask=F2>c0), maxval(imass , mask=F2>c0)
-            write(nu_diag,'(a,i0)') 'CDP: icell =', icell
+            ! write(nu_diag,'(a,i0)') 'CDP: icell =', icell
          end if
 
          ! stress form factor
-         do ij = 1, icell
-            i       = ind_i(ij)
-            j       = ind_j(ij)
-            Ku(i,j) = imass(i,j) * F2(i,j) * Cs 
-         end do
+         ! do ij = 1, icell
+         !    i       = ind_i(ij)
+         !    j       = ind_j(ij)
+         !    if (F2(i,j) > c0) Ku(i,j) = imass(i,j) * F2(i,j) * Cs
+         ! end do
+         Ku = imass * F2 * Cs
 
          ! subroutine diagnostics
-         if (my_task==master_task) then
-            write(nu_diag,'(a,2(1pe12.4,1x),a,1pe12.4)') 'CDP: Ku@F2>0 min/max/avg =', &
-            minval(Ku, mask=F2>c0), maxval(Ku, mask=F2>c0), ' ', sum(Ku, mask=F2>c0)/icell
-         end if
+         ! if (my_task==master_task) then
+         !    write(nu_diag,'(a,2(1pe12.4,1x),a,1pe12.4)') 'CDP: Ku@F2>0 min/max/avg =', &
+         !    minval(Ku, mask=F2>c0), maxval(Ku, mask=F2>c0), ' ', sum(Ku, mask=F2>c0)/icell
+         ! end if
       end subroutine coastal_drag_stress_factor
 
 !=======================================================================
