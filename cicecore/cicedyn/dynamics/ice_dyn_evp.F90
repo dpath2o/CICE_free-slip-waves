@@ -1132,39 +1132,47 @@
             !$OMP END PARALLEL DO
 
             ! --- Diagnostics at end of subcycling ---------------------------------
-            if (ksub == ndte) then
-               nE = count(F2E /= c0)
-               nN = count(F2N /= c0)
-               nKux = count(KuxE /= c0)
-               nKuy = count(KuyN /= c0)
-               write(nu_diag,9000) 'after stepu/v_C calls F2E min/max/avg =', &
-                  minval(F2E, mask=F2E/=c0), maxval(F2E, mask=F2E/=c0), &
-                  sum(F2E, mask=F2E/=c0)/real(max(1,nE), dbl_kind)
-               write(nu_diag,9000) 'after stepu/v_C calls F2N min/max/avg =', &
-                  minval(F2N, mask=F2N/=c0), maxval(F2N, mask=F2N/=c0), &
-                  sum(F2N, mask=F2N/=c0)/real(max(1,nN), dbl_kind)
-               write(nu_diag,9000) 'after stepu/v_C calls KuE min/max/avg =', &
-                  minval(KuE, mask=KuE/=c0), maxval(KuE, mask=KuE/=c0), &
-                  sum(KuE, mask=KuE/=c0)/real(max(1,nE), dbl_kind)
-               write(nu_diag,9000) 'after stepu/v_C calls KuN min/max/avg =', &
-                  minval(KuN, mask=KuN/=c0), maxval(KuN, mask=KuN/=c0), &
-                  sum(KuN, mask=KuN/=c0)/real(max(1,nN), dbl_kind)
-               if (nKux > 0) then
-               write(nu_diag,9000) 'after stepu/v_C calls KuxE min/max/avg =', &
-                     minval(KuxE, mask=KuxE/=c0), maxval(KuxE, mask=KuxE/=c0), &
-                     sum(KuxE, mask=KuxE/=c0)/real(nKux, dbl_kind)
-               else
-               write(nu_diag,'(a)') 'after stepu/v_C calls KuxE: all zero.'
-               end if
+            ! if (ksub == ndte) then
+            !    nE = count(F2E /= c0)
+            !    nN = count(F2N /= c0)
+            !    nKux = count(KuxE /= c0)
+            !    nKuy = count(KuyN /= c0)
 
-               if (nKuy > 0) then
-               write(nu_diag,9000) 'after stepu/v_C calls KuyN min/max/avg =', &
-                     minval(KuyN, mask=KuyN/=c0), maxval(KuyN, mask=KuyN/=c0), &
-                     sum(KuyN, mask=KuyN/=c0)/real(nKuy, dbl_kind)
-               else
-               write(nu_diag,'(a)') 'after stepu/v_C calls KuyN: all zero.'
-               end if
-            end if
+
+            !    write(nu_diag,9000) 'after stepu/v_C calls F2E min/max/avg =', &
+            !       minval(F2E, mask=F2E/=c0), maxval(F2E, mask=F2E/=c0), &
+            !       sum(F2E, mask=F2E/=c0)/real(max(1,nE), dbl_kind)
+            !    write(nu_diag,9000) 'after stepu/v_C calls F2N min/max/avg =', &
+            !       minval(F2N, mask=F2N/=c0), maxval(F2N, mask=F2N/=c0), &
+            !       sum(F2N, mask=F2N/=c0)/real(max(1,nN), dbl_kind)
+            !    write(nu_diag,9000) 'after stepu/v_C calls KuE min/max/avg =', &
+            !       minval(KuE, mask=KuE/=c0), maxval(KuE, mask=KuE/=c0), &
+            !       sum(KuE, mask=KuE/=c0)/real(max(1,nE), dbl_kind)
+            !    write(nu_diag,9000) 'after stepu/v_C calls KuN min/max/avg =', &
+            !       minval(KuN, mask=KuN/=c0), maxval(KuN, mask=KuN/=c0), &
+            !       sum(KuN, mask=KuN/=c0)/real(max(1,nN), dbl_kind)
+            !    if (nKux > 0) then
+            !    write(nu_diag,9000) 'after stepu/v_C calls KuxE min/max/avg =', &
+            !          minval(KuxE, mask=KuxE/=c0), maxval(KuxE, mask=KuxE/=c0), &
+            !          sum(KuxE, mask=KuxE/=c0)/real(nKux, dbl_kind)
+            !    else
+            !    write(nu_diag,'(a)') 'after stepu/v_C calls KuxE: all zero.'
+            !    end if
+            !    if (nKuy > 0) then
+            !    write(nu_diag,9000) 'after stepu/v_C calls KuyN min/max/avg =', &
+            !          minval(KuyN, mask=KuyN/=c0), maxval(KuyN, mask=KuyN/=c0), &
+            !          sum(KuyN, mask=KuyN/=c0)/real(nKuy, dbl_kind)
+            !    else
+            !    write(nu_diag,'(a)') 'after stepu/v_C calls KuyN: all zero.'
+            !    end if
+            !    write(nu_diag,9000) 'KuyE coast min/max/avg =', &
+            !       minval(KuyE, mask=F2E>c0), maxval(KuyE, mask=F2E>c0), &
+            !       sum(KuyE, mask=F2E>c0)/real(max(1,nE), dbl_kind)
+
+            !    write(nu_diag,9000) 'KuxN coast min/max/avg =', &
+            !       minval(KuxN, mask=F2N>c0), maxval(KuxN, mask=F2N>c0), &
+            !       sum(KuxN, mask=F2N>c0)/real(max(1,nN), dbl_kind)
+            ! end if
             ! ----------------------------------------------------------------------
 
             ! calls ice_haloUpdate, controls bundles and masks
@@ -1198,6 +1206,21 @@
             call dyn_haloUpdate (halo_info,          halo_info_mask,    &
                                  field_loc_NEcorner, field_type_vector, &
                                  uvel, vvel)
+
+            ! if (ksub == ndte) then
+            !    nE = count(F2E /= c0);  nN = count(F2N /= c0)
+
+            !    write(nu_diag,9000) 'end-subcycle |u|_coast mean =', &
+            !       sum(sqrt(uvelE**2 + vvelE**2), mask=F2E/=c0) / real(max(1,nE),dbl_kind)
+            !    write(nu_diag,9000) 'end-subcycle |v|_coast mean =', &
+            !       sum(sqrt(uvelN**2 + vvelN**2), mask=F2N/=c0) / real(max(1,nN),dbl_kind)
+
+            !    ! Optional: relative to interior
+            !    write(nu_diag,9000) 'end-subcycle |u|_interior mean =', &
+            !       sum(sqrt(uvelE**2 + vvelE**2), mask=F2E==c0) / real(max(1, size(uvelE,1)*size(uvelE,2) - nE), dbl_kind)
+            !    write(nu_diag,9000) 'end-subcycle |v|_interior mean =', &
+            !       sum(sqrt(uvelN**2 + vvelN**2), mask=F2N==c0) / real(max(1, size(uvelN,1)*size(uvelN,2) - nN), dbl_kind)
+            ! end if
 
          enddo                     ! subcycling
 

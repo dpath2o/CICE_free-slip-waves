@@ -7,7 +7,7 @@
 #   endif
 # endif
 #--------------------------------------------
-cd /home/581/da1339/AFIM/src/CICE_free-slip/free-slip
+cd /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01
 source ./cice.settings || exit 2
 source ./env.${ICE_MACHCOMP} || exit 2
 echo " "

@@ -1730,6 +1730,12 @@
 
       if (istep1 >= debug_model_step) then
 
+         ! --- dpath2o: scan whole block for likely bad thermo columns
+         ! Do this *outside* the single-point debug gate so we can find the culprit column.
+         if (index(trim(plabeld), 'pre step_therm1') > 0) then
+            call dump_bad_thermo_columns(iblk, plabeld)
+         endif
+
          ! set debug point to 1st global point if not set as local values
          if (debug_model_i < 0 .and. debug_model_j < 0 .and. &
              debug_model_iblk < 0 .and. debug_model_task < 0) then
@@ -1942,6 +1948,139 @@
       call flush_fileunit(nu_diag)
 
       end subroutine print_state
+
+!=======================================================================
+! dpath2o, Dec.25
+! Dump first few "bad" columns/cats that could trigger vertical thermo abort
+      subroutine dump_bad_thermo_columns(iblk, plabeld)
+      !
+      ! Scan a whole block for “obviously bad” category columns just before step_therm1.
+      ! Designed to help localise Icepack “Vertical thermo error, cat X” aborts.
+      !
+      use ice_domain_size, only : ncat, nilyr, nslyr
+      use ice_grid,        only : hm
+      use ice_state,       only : aicen, vicen, vsnon, trcrn
+      use ice_constants,   only : p5
+
+      integer (kind=int_kind), intent(in) :: iblk
+      character(char_len),     intent(in) :: plabeld
+
+      integer (kind=int_kind) :: i, j, n, il
+      integer (kind=int_kind) :: nbad, nprt
+      logical                 :: bad
+
+      real (kind=dbl_kind) :: a, vi, vs, hi, hs, Ts
+      real (kind=dbl_kind) :: q, qimin, qimax, qsmin, qsmax
+
+      integer (kind=int_kind) :: nt_Tsfc, nt_qice, nt_qsno, nt_fsd, &
+           nt_isosno, nt_isoice, nt_sice, nt_smice, nt_smliq
+
+      ! Tunables (keep conservative to avoid false positives)
+      integer (kind=int_kind), parameter :: cat_target = 2
+      integer (kind=int_kind), parameter :: max_print  = 20
+      real    (kind=dbl_kind), parameter :: tiny      = 1.0e-12_dbl_kind
+      real    (kind=dbl_kind), parameter :: hi_max    = 60.0_dbl_kind   ! m
+      real    (kind=dbl_kind), parameter :: hs_max    = 20.0_dbl_kind   ! m
+      real    (kind=dbl_kind), parameter :: Ts_min    = -120.0_dbl_kind ! degC
+      real    (kind=dbl_kind), parameter :: Ts_max    =  20.0_dbl_kind  ! degC
+      real    (kind=dbl_kind), parameter :: qabs_max  = 2.0e9_dbl_kind  ! J/m3 (very conservative)
+
+      call icepack_query_tracer_indices(nt_Tsfc_out=nt_Tsfc, nt_qice_out=nt_qice, &
+               nt_qsno_out=nt_qsno, nt_sice_out=nt_sice, nt_fsd_out=nt_fsd, &
+               nt_isosno_out=nt_isosno, nt_isoice_out=nt_isoice, &
+               nt_smice_out=nt_smice, nt_smliq_out=nt_smliq)
+
+      nbad = 0
+      nprt = 0
+
+      n = cat_target
+      if (n < 1 .or. n > ncat) return
+
+      do j = 1, ny_block
+         do i = 1, nx_block
+
+            if (hm(i,j,iblk) < p5) cycle  ! land
+
+            a  = aicen(i,j,n,iblk)
+            vi = vicen(i,j,n,iblk)
+            vs = vsnon(i,j,n,iblk)
+
+            ! skip empty category quickly
+            if (a <= tiny .and. vi <= tiny .and. vs <= tiny) cycle
+
+            bad = .false.
+
+            ! NaNs (portable check)
+            if (a  /= a ) bad = .true.
+            if (vi /= vi) bad = .true.
+            if (vs /= vs) bad = .true.
+
+            ! basic physical checks
+            if (a  < -tiny .or. a  > (c1 + 1.0e-6_dbl_kind)) bad = .true.
+            if (vi < -tiny) bad = .true.
+            if (vs < -tiny) bad = .true.
+
+            hi = c0
+            hs = c0
+            if (a > tiny) then
+               hi = vi / a
+               hs = vs / a
+               if (hi < -tiny .or. hi > hi_max) bad = .true.
+               if (hs < -tiny .or. hs > hs_max) bad = .true.
+            endif
+
+            ! surface temperature tracer sanity
+            Ts = trcrn(i,j,nt_Tsfc,n,iblk)
+            if (Ts /= Ts) bad = .true.
+            if (Ts < Ts_min .or. Ts > Ts_max) bad = .true.
+
+            ! enthalpy tracer sanity (min/max over layers)
+            qimin =  huge(c1)
+            qimax = -huge(c1)
+            do il = 1, nilyr
+               q = trcrn(i,j,nt_qice+il-1,n,iblk)
+               if (q /= q) bad = .true.
+               if (abs(q) > qabs_max) bad = .true.
+               qimin = min(qimin, q)
+               qimax = max(qimax, q)
+            enddo
+
+            qsmin =  huge(c1)
+            qsmax = -huge(c1)
+            do il = 1, nslyr
+               q = trcrn(i,j,nt_qsno+il-1,n,iblk)
+               if (q /= q) bad = .true.
+               if (abs(q) > qabs_max) bad = .true.
+               qsmin = min(qsmin, q)
+               qsmax = max(qsmax, q)
+            enddo
+
+            if (bad) then
+               nbad = nbad + 1
+
+               ! Only print when we find issues; avoid global spam.
+               if (nprt < max_print) then
+                  nprt = nprt + 1
+                  write(nu_diag,*) '(dump_bad_thermo_columns) ', trim(plabeld), &
+                       ' task/iblk=', my_task, iblk, ' i/j=', i, j, ' cat=', n, &
+                       ' a=', a, ' vi=', vi, ' vs=', vs, ' hi=', hi, ' hs=', hs, &
+                       ' Tsfc=', Ts, ' qice[min,max]=', qimin, qimax, &
+                       ' qsno[min,max]=', qsmin, qsmax
+
+                  ! Reuse existing CICE dump format for that exact column
+                  call print_state(trim(plabeld)//' BADTHERM', i, j, iblk)
+               endif
+            endif
+
+         enddo
+      enddo
+
+      if (nbad > 0 .and. nprt == max_print) then
+         write(nu_diag,*) '(dump_bad_thermo_columns) NOTE: truncated after ', max_print, &
+                          ' prints on task/iblk=', my_task, iblk, ' (more bad cols exist)'
+      endif
+
+      end subroutine dump_bad_thermo_columns
 
 !=======================================================================
 

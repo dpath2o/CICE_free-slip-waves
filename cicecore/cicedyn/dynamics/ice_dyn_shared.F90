@@ -1160,7 +1160,18 @@
          rhow               , & ! density of water
          Cl
 
+      ! stepu_C locals (add near other locals)
+      real(kind=dbl_kind) :: u_noCDP, du
+      real(kind=dbl_kind) :: sum_du_coast, sum_absu_coast
+      integer(kind=int_kind) :: n_coast
+
       character(len=*), parameter :: subname = '(stepu_C)'
+
+      sum_du_coast = c0;
+      sum_absu_coast = c0;
+      n_coast = 0
+      Kux = c0
+      Kuy = c0
 
       !-----------------------------------------------------------------
       ! integrate the momentum equation
@@ -1193,6 +1204,16 @@
          ! compute the velocity components
          cc1 = strintx(i,j) + forcex(i,j) + taux + massdti(i,j)*(brlx*uold + revp*uvel_init(i,j))
          uvel(i,j) = (ccb*vold + cc1) / cca ! m/s
+
+         ! --- CDP effect diagnostic (does not alter state) ---
+         ! Hypothetical velocity if CDP were disabled this substep:
+         if (Cl > 0.0d0) then
+            u_noCDP        = (ccb*vold + cc1) / (cca - Cl)
+            du             = uvel(i,j) - u_noCDP        ! negative when CDP damps |u|
+            sum_du_coast   = sum_du_coast + du
+            sum_absu_coast = sum_absu_coast + abs(u_noCDP)
+            n_coast        = n_coast + 1
+         end if
 
          ! calculate seabed stress component for outputs
          ! only needed on last iteration.
@@ -1265,7 +1286,16 @@
          rhow               , & ! density of water
          Cl
 
+      ! stepv_C locals (add near other locals)
+      real(kind=dbl_kind) :: v_noCDP, dv
+      real(kind=dbl_kind) :: sum_dv_coast, sum_absv_coast
+      integer(kind=int_kind) :: n_coast
+      
       character(len=*), parameter :: subname = '(stepv_C)'
+      
+      sum_dv_coast = c0;
+      sum_absv_coast = c0;
+      n_coast = 0
 
       !-----------------------------------------------------------------
       ! integrate the momentum equation
@@ -1299,6 +1329,16 @@
          cc2 = strinty(i,j) + forcey(i,j) + tauy + massdti(i,j)*(brlx*vold + revp*vvel_init(i,j))
          vvel(i,j) = (-ccb*uold + cc2) / cca
 
+         ! --- CDP effect diagnostic (does not alter state) ---
+         ! Hypothetical velocity if CDP were disabled this substep:
+         if (Cl > 0.0d0) then
+            v_noCDP        = (-ccb*uold + cc2) / (cca - Cl)
+            dv             = vvel(i,j) - v_noCDP        ! negative when CDP damps |u|
+            sum_dv_coast   = sum_dv_coast + dv
+            sum_absv_coast = sum_absv_coast + abs(v_noCDP)
+            n_coast        = n_coast + 1
+         end if
+
          ! calculate seabed stress component for outputs
          ! only needed on last iteration.
          tauby(i,j) = -vvel(i,j)*Cb
@@ -1307,7 +1347,7 @@
          Kux(i,j) = -uvel(i,j)*Cl   ! tangential-to-wall at N 
          Kuy(i,j) = -vvel(i,j)*Cl   ! normal-to-wall at N
 
-      enddo                     ! ij
+      enddo                     ! ij=
 
       end subroutine stepv_C
 
@@ -1406,8 +1446,6 @@
 !
 ! authors: dpath2o
       subroutine coastal_drag_stress_factor(nx_block, ny_block, &
-                                            ! icell   ,           &
-                                            ! ind_i   , ind_j   , &
                                             imass   ,           &
                                             Ku      ,           &
                                             F2)
@@ -1417,13 +1455,7 @@
 
          implicit none
 
-         integer(kind=int_kind), intent(in) :: &
-            nx_block, ny_block!, & ! block dimensions
-            !icell                 ! total count when ice[E|N]mask is true
-
-         ! integer(kind=int_kind), dimension(nx_block*ny_block), intent(in) :: &
-         !    ind_i, & ! compressed index in i-direction
-         !    ind_j    ! compressed index in j-direction
+         integer(kind=int_kind), intent(in) :: nx_block, ny_block
 
          real(kind=dbl_kind), dimension(nx_block,ny_block), intent(in) :: &
             imass , & ! mass of n-cell/dt (kg/m^2 s)
@@ -1432,38 +1464,18 @@
          real(kind=dbl_kind), dimension(nx_block,ny_block), intent(inout) :: &
             Ku ! coastline stress form factor; kg/m^2 * _ * m/s^2 = kg/(m*s^2) = Pascal (Pa)
 
-         ! integer (kind=int_kind) :: &
-         !    i, j, ij ! subroutine indices
-
-         ! ! gauard  
-         ! if (icell <= 0) then
-         !    if (my_task==master_task) write(nu_diag,'(a)') 'CDP: icell==0; Ku unchanged.'
-         !    return
+         ! ! subroutine diagnostics
+         ! if (my_task==master_task) then
+         !    write(nu_diag,'(a,1pe12.4)') 'CDP: Cs =', Cs
+         !    write(nu_diag,'(a,2(1pe12.4,1x))') 'CDP: F2(mask) min/max =', &
+         !       minval(F2, mask=F2>c0), maxval(F2, mask=F2>c0)
+         !    write(nu_diag,'(a,2(1pe12.4,1x))') 'CDP: imass@F2>0 min/max =', &
+         !       minval(imass , mask=F2>c0), maxval(imass , mask=F2>c0)
+         !    ! write(nu_diag,'(a,i0)') 'CDP: icell =', icell
          ! end if
 
-         ! subroutine diagnostics
-         if (my_task==master_task) then
-            write(nu_diag,'(a,1pe12.4)') 'CDP: Cs =', Cs
-            write(nu_diag,'(a,2(1pe12.4,1x))') 'CDP: F2(mask) min/max =', &
-               minval(F2, mask=F2>c0), maxval(F2, mask=F2>c0)
-            write(nu_diag,'(a,2(1pe12.4,1x))') 'CDP: imass@F2>0 min/max =', &
-               minval(imass , mask=F2>c0), maxval(imass , mask=F2>c0)
-            ! write(nu_diag,'(a,i0)') 'CDP: icell =', icell
-         end if
-
-         ! stress form factor
-         ! do ij = 1, icell
-         !    i       = ind_i(ij)
-         !    j       = ind_j(ij)
-         !    if (F2(i,j) > c0) Ku(i,j) = imass(i,j) * F2(i,j) * Cs
-         ! end do
          Ku = imass * F2 * Cs
 
-         ! subroutine diagnostics
-         ! if (my_task==master_task) then
-         !    write(nu_diag,'(a,2(1pe12.4,1x),a,1pe12.4)') 'CDP: Ku@F2>0 min/max/avg =', &
-         !    minval(Ku, mask=F2>c0), maxval(Ku, mask=F2>c0), ' ', sum(Ku, mask=F2>c0)/icell
-         ! end if
       end subroutine coastal_drag_stress_factor
 
 !=======================================================================

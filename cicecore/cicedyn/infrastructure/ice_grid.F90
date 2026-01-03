@@ -2630,8 +2630,8 @@ subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_cas
    ! ----- locals -----
    type(block)               :: this_block
    integer(kind=int_kind)    :: iblk, i, j, ilo, ihi, jlo, jhi
-   integer(kind=int_kind)    :: ilE, ihE, jlE, jhE, ilN, ihN, jlN, jhN, iW, iE, jS, jN
-   integer(kind=int_kind) :: cntW, cntE, cntS, cntNside
+   integer(kind=int_kind)    :: nW, nE, nS, nN !ilE, ihE, jlE, jhE, ilN, ihN, jlN, jhN, iW, iE, jS, jN, 
+   integer(kind=int_kind)    :: cntW, cntE, cntS, cntNside
    logical(kind=log_kind)    :: use_coast, want_perimeter
    real   (kind=dbl_kind)    :: F2_val
    integer(kind=int_kind)    :: ncid, varid, ierr
@@ -2655,7 +2655,7 @@ subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_cas
    F2E = c0
    F2N = c0
 
-   ! ----- choose coastline source -----
+! ----- choose coastline source -----
    use_coast = .false.
 #ifdef _NETCDF
    if (present(coast_file)) then
@@ -2690,147 +2690,139 @@ subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_cas
       write(nu_diag,'(a)') 'build_F2: tmask fallback (no coast_file).'
    end if
 #endif
-  ! zero first
-cntE_adj = 0; cntN_adj = 0
 
-! --- main pass: land–ocean adjacencies on T grid (block-local) ---
-! NOTE: faces are interior ranges: E i=ilo..ihi-1, N j=jlo..jhi-1
+   ! ----- main pass: forward differences on T grid (find E/N adjacencies) -----
+   cntE_adj = 0;  cntN_adj = 0
 !$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi,i,j,oceL,oceR,oceS,oceN) SCHEDULE(runtime) REDUCTION(+:cntE_adj,cntN_adj)
-do iblk = 1, nblocks
-  this_block = get_block(blocks_ice(iblk), iblk)
-  ilo = this_block%ilo;  ihi = this_block%ihi
-  jlo = this_block%jlo;  jhi = this_block%jhi
-
-  ! E faces: compare T(i,j) vs T(i+1,j)
-  do j = jlo, jhi
-    do i = ilo, ihi-1
-#ifdef _NETCDF
-      if (use_coast) then
-        oceL = (coastT(i    ,j) > 0.5d0)
-        oceR = (coastT(i + 1,j) > 0.5d0)
-      else
-#endif
-        oceL = tmask(i    ,j,iblk)
-        oceR = tmask(i + 1,j,iblk)
-#ifdef _NETCDF
-      end if
-#endif
-      if (oceL .neqv. oceR) then
-        F2E(i,j,iblk) = F2_val
-        cntE_adj = cntE_adj + 1
-      end if
-    end do
-  end do
-
-  ! N faces: compare T(i,j) vs T(i,j+1)
-  do j = jlo, jhi-1
-    do i = ilo, ihi
-#ifdef _NETCDF
-      if (use_coast) then
-        oceS = (coastT(i,j    ) > 0.5d0)
-        oceN = (coastT(i,j + 1) > 0.5d0)
-      else
-#endif
-        oceS = tmask(i,j    ,iblk)
-        oceN = tmask(i,j + 1,iblk)
-#ifdef _NETCDF
-      end if
-#endif
-      if (oceS .neqv. oceN) then
-        F2N(i,j,iblk) = F2_val
-        cntN_adj = cntN_adj + 1
-      end if
-    end do
-  end do
-end do
-!$OMP END PARALLEL DO
-
-! --- perimeter fallback (pure-ocean box tests) ---
-if (.not. use_coast) then
-  if ( (cntE_adj + cntN_adj) == 0 .or. want_perimeter ) then
-    write(nu_diag,'(a)') 'build_F2: perimeter treated as coastline (fallback mode).'
-!$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi,i,j) SCHEDULE(runtime)
-    do iblk = 1, nblocks
+   do iblk = 1, nblocks
       this_block = get_block(blocks_ice(iblk), iblk)
       ilo = this_block%ilo;  ihi = this_block%ihi
       jlo = this_block%jlo;  jhi = this_block%jhi
 
-      ! E faces: first and last interior columns
+      ! E faces: compare T(i,j) vs T(i+1,j)
       do j = jlo, jhi
-        F2E(ilo  ,j,iblk) = F2_val   ! WEST  edge (first interior E-face)
-        F2E(ihi-1,j,iblk) = F2_val   ! EAST  edge (last  interior E-face)
+         do i = ilo, ihi-1
+#ifdef _NETCDF
+            if (use_coast) then
+               oceL = (coastT(i    ,j) > 0.5d0)
+               oceR = (coastT(i + 1,j) > 0.5d0)
+            else
+#endif
+               oceL = tmask(i    ,j,iblk)
+               oceR = tmask(i + 1,j,iblk)
+#ifdef _NETCDF
+            end if
+#endif
+            if (oceL .neqv. oceR) then
+               F2E(i,j,iblk) = F2_val
+               cntE_adj = cntE_adj + 1
+            end if
+         end do
       end do
 
-      ! N faces: first and last interior rows
+      ! N faces: compare T(i,j) vs T(i,j+1)
+      do j = jlo, jhi-1
+         do i = ilo, ihi
+#ifdef _NETCDF
+            if (use_coast) then
+               oceS = (coastT(i,j    ) > 0.5d0)
+               oceN = (coastT(i,j + 1) > 0.5d0)
+            else
+#endif
+               oceS = tmask(i,j    ,iblk)
+               oceN = tmask(i,j + 1,iblk)
+#ifdef _NETCDF
+            end if
+#endif
+            if (oceS .neqv. oceN) then
+               F2N(i,j,iblk) = F2_val
+               cntN_adj = cntN_adj + 1
+            end if
+         end do
+      end do
+   end do
+!$OMP END PARALLEL DO
+
+   ! ----- edge completion (fills W/S using halos; writes interior faces only) -----
+!$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi,i,j,oceL,oceR,oceS,oceN) SCHEDULE(runtime)
+   do iblk = 1, nblocks
+      this_block = get_block(blocks_ice(iblk), iblk)
+      ilo = this_block%ilo;  ihi = this_block%ihi
+      jlo = this_block%jlo;  jhi = this_block%jhi
+
+      ! West/East vertical faces (E-grid)
+      do j = jlo, jhi
+         oceL = tmask(ilo-1,j,iblk);  oceR = tmask(ilo  ,j,iblk)
+         if (oceL .neqv. oceR) F2E(ilo  ,j,iblk) = F2_val   ! WEST at i=ilo
+         oceL = tmask(ihi-1,j,iblk);  oceR = tmask(ihi  ,j,iblk)
+         if (oceL .neqv. oceR) F2E(ihi-1,j,iblk) = F2_val   ! EAST at i=ihi-1
+      end do
+
+      ! South/North horizontal faces (N-grid)
       do i = ilo, ihi
-        F2N(i,jlo  ,iblk) = F2_val   ! SOUTH edge (first interior N-face)
-        F2N(i,jhi-1,iblk) = F2_val   ! NORTH edge (last  interior N-face)
+         oceS = tmask(i,jlo-1,iblk);  oceN = tmask(i,jlo  ,iblk)
+         if (oceS .neqv. oceN) F2N(i,jlo  ,iblk) = F2_val   ! SOUTH at j=jlo
+         oceS = tmask(i,jhi-1,iblk);  oceN = tmask(i,jhi  ,iblk)
+         if (oceS .neqv. oceN) F2N(i,jhi-1,iblk) = F2_val   ! NORTH at j=jhi-1
       end do
-    end do
-!$OMP END PARALLEL DO
-  end if
-end if
-
-! quick counts
-setE = count(F2E > c0)
-setN = count(F2N > c0)
-
-! counts across blocks for each side (optional but handy)
-
-cntW=0; cntE=0; cntS=0; cntNside=0
-!$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi) &
-!$OMP& SCHEDULE(runtime) REDUCTION(+:cntW,cntE,cntS,cntNside)
-do iblk = 1, nblocks
-  this_block = get_block(blocks_ice(iblk), iblk)
-  ilo = this_block%ilo;  ihi = this_block%ihi
-  jlo = this_block%jlo;  jhi = this_block%jhi
-  cntW     = cntW     + count(F2E(ilo  , jlo:jhi, iblk) > c0)
-  cntE     = cntE     + count(F2E(ihi-1, jlo:jhi, iblk) > c0)
-  cntS     = cntS     + count(F2N(ilo:ihi, jlo  , iblk) > c0)
-  cntNside = cntNside + count(F2N(ilo:ihi, jhi-1, iblk) > c0)
-end do
+   end do
 !$OMP END PARALLEL DO
 
-write(nu_diag,'(a,4(i0,1x))') 'build_F2: edge counts W/E/S/N = ', &
-                               cntW, cntE, cntS, cntNside
-write(nu_diag,'(a,1p,2e12.4,a,1p,2e12.4)') 'build_F2: F2E(min,max)=',  &
-     minval(F2E), maxval(F2E), '  F2N(min,max)=', minval(F2N), maxval(F2N)
+   ! ----- perimeter fallback (pure-ocean box or explicit test_case) -----
+   if (.not. use_coast) then
+      if ( (cntE_adj + cntN_adj) == 0 .or. want_perimeter ) then
+         write(nu_diag,'(a)') 'build_F2: perimeter treated as coastline (fallback mode).'
+!$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi,i,j) SCHEDULE(runtime)
+         do iblk = 1, nblocks
+            this_block = get_block(blocks_ice(iblk), iblk)
+            ilo = this_block%ilo;  ihi = this_block%ihi
+            jlo = this_block%jlo;  jhi = this_block%jhi
+            do j = jlo, jhi
+               F2E(ilo  ,j,iblk) = F2_val    ! west interior E-face
+               F2E(ihi-1,j,iblk) = F2_val    ! east interior E-face
+            end do
+            do i = ilo, ihi
+               F2N(i,jlo  ,iblk) = F2_val    ! south interior N-face
+               F2N(i,jhi-1,iblk) = F2_val    ! north interior N-face
+            end do
+         end do
+!$OMP END PARALLEL DO
+      end if
+   end if
 
-   ! ! ----- cleanup -----
-   ! if (use_coast) then
-   !    if (allocated(coastT)) deallocate(coastT)
-   ! end if
+   ! ----- diagnostics -----
+   setE = count(F2E > c0)
+   setN = count(F2N > c0)
+   nW = 0; nE = 0; nS = 0; nN = 0
+   cntE_act = 0; cntN_act = 0
+!$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi) REDUCTION(+:cntE_act,cntN_act,nW,nE,nS,nN)
+   do iblk = 1, nblocks
+      this_block = get_block(blocks_ice(iblk), iblk)
+      ilo = this_block%ilo;  ihi = this_block%ihi
+      jlo = this_block%jlo;  jhi = this_block%jhi
+      cntE_act = cntE_act + (ihi-ilo)  * (jhi-jlo+1)
+      cntN_act = cntN_act + (ihi-ilo+1)* (jhi-jlo)
+      nW = nW + count(F2E(ilo   , jlo:jhi, iblk) > c0)
+      nE = nE + count(F2E(ihi-1 , jlo:jhi, iblk) > c0)
+      nS = nS + count(F2N(ilo:ihi, jlo   , iblk) > c0)
+      nN = nN + count(F2N(ilo:ihi, jhi-1 , iblk) > c0)
+   end do
+!$OMP END PARALLEL DO
 
-   ! cntE_act = 0
-   ! cntN_act = 0
-   ! !$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi) REDUCTION(+:cntE_act,cntN_act)
-   ! do iblk = 1, nblocks
-   !    this_block = get_block(blocks_ice(iblk), iblk)
-   !    ilo = this_block%ilo;  ihi = this_block%ihi
-   !    jlo = this_block%jlo;  jhi = this_block%jhi
-   !    cntE_act = cntE_act + (ihi-ilo)  * (jhi-jlo+1)   ! E faces per block
-   !    cntN_act = cntN_act + (ihi-ilo+1)* (jhi-jlo)     ! N faces per block
-   ! end do
-   ! !$OMP END PARALLEL DO
+   if (my_task==master_task) then
+      write(nu_diag,'(a,l1,a,i10,a,i10)') 'build_F2: use_coast=', use_coast,  &
+         '  F2E faces active=', cntE_act, '  F2E coast-adj=', cntE_adj
+      write(nu_diag,'(a,a,i10,a,i10)') 'build_F2: counts  F2N faces active=',  &
+         ' ', cntN_act, '  F2N coast-adj=', cntN_adj
+      write(nu_diag,'(a,i10,a,i10)') 'build_F2: faces set:  F2E=', setE, '  F2N=', setN
+      write(nu_diag,'(a,1p,2e12.4,a,1p,2e12.4)') 'build_F2: F2E(min,max)=',  &
+         minval(F2E), maxval(F2E), '  F2N(min,max)=', minval(F2N), maxval(F2N)
+      write(nu_diag,'(a,4(i0,1x))') 'build_F2: edge counts W/E/S/N =', nW, nE, nS, nN
+   end if
 
-   ! ! ----- diagnostics (safe, no out-of-scope iblk) -----
-   ! if (my_task == master_task) then
-   !    write(nu_diag,'(a,l1,a,i10,a,i10)') 'build_F2: use_coast=', use_coast,  &
-   !       '  F2E faces active=', cntE_act, '  F2E coast-adj=', cntE_adj
-   !    write(nu_diag,'(a,a,i10,a,i10)') 'build_F2: counts  F2N faces active=',  &
-   !       ' ', cntN_act, '  F2N coast-adj=', cntN_adj
-   !    write(nu_diag,'(a,i10,a,i10)') 'build_F2: faces set:  F2E=', setE, '  F2N=', setN
-   !    write(nu_diag,'(a,1p,2e12.4,a,1p,2e12.4)') 'build_F2: F2E(min,max)=',  &
-   !       minval(F2E), maxval(F2E), '  F2N(min,max)=', minval(F2N), maxval(F2N)
-   !    write(nu_diag,'(a,1pe12.4,1x,1pe12.4)') 'build_F2: F2E west min/max =',  &
-   !       minval(F2E(ilo   :ilo   , jlo:jhi, iblk)), maxval(F2E(ilo   :ilo   , jlo:jhi, iblk))
-   !    write(nu_diag,'(a,1pe12.4,1x,1pe12.4)') 'build_F2: F2E east min/max =',  &
-   !       minval(F2E(ihi-1 :ihi-1 , jlo:jhi, iblk)), maxval(F2E(ihi-1 :ihi-1 , jlo:jhi, iblk))
-   !    write(nu_diag,'(a,1pe12.4,1x,1pe12.4)') 'build_F2: F2N south min/max=',  &
-   !       minval(F2N(ilo:ihi, jlo   :jlo   , iblk)), maxval(F2N(ilo:ihi, jlo   :jlo   , iblk))
-   !    write(nu_diag,'(a,1pe12.4,1x,1pe12.4)') 'build_F2: F2N north min/max=',  &
-   !       minval(F2N(ilo:ihi, jhi-1 :jhi-1 , iblk)), maxval(F2N(ilo:ihi, jhi-1 :jhi-1 , iblk))
-   ! end if
+   if (use_coast) then
+      if (allocated(coastT)) deallocate(coastT)
+   end if
 
 end subroutine build_F2_form_factors_cgrid
 

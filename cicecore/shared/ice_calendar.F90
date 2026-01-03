@@ -111,7 +111,8 @@
          new_year       , & ! new year = .true.
          new_month      , & ! new month = .true.
          new_day        , & ! new day = .true.
-         new_hour           ! new hour = .true.
+         new_hour       , & ! new hour = .true.
+         isleap             ! added by dpath2o and used in ice_forcing.F90 for testing if leap year
 
       real (kind=dbl_kind), public :: &
          dt             , & ! thermodynamics timestep (s)

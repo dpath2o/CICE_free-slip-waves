@@ -151,7 +151,7 @@
 !
 !----------------------------------------------------------------------
 
-   nprocs = -1
+   nprocs = 1232 !-1
    processor_shape   = 'slenderX2'
    distribution_type = 'cartesian'
    distribution_wght = 'latitude'

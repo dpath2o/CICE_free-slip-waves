@@ -98,7 +98,7 @@
           atm_data_type,   atm_data_dir,  precip_units, rotate_wind, &
           atm_data_format, ocn_data_format, atm_data_version, &
           bgc_data_type, &
-          ocn_data_type, ocn_data_dir, wave_spec_file,  &
+          ocn_data_type, ocn_data_freq, ocn_data_dir, wave_spec_file,  &
           oceanmixed_file, restore_ocn, trestore, &
           ice_data_type, ice_data_conc, ice_data_dist, &
           snw_filename, &
@@ -292,7 +292,7 @@
         saltflux_option,ice_ref_salinity,cpl_frazil,    congel_freeze,  &
         oceanmixed_ice, restore_ice,     restore_ocn,   trestore,       &
         precip_units,   default_season,  wave_spec_type,nfreq,          &
-        atm_data_type,  ocn_data_type,   bgc_data_type, fe_data_type,   &
+        atm_data_type,  ocn_data_type,   ocn_data_freq, bgc_data_type, fe_data_type,   &
         ice_data_type,  ice_data_conc,   ice_data_dist,                 &
         fyear_init,     ycycle,          wave_spec_file,restart_coszen, &
         atm_data_dir,   ocn_data_dir,    bgc_data_dir,                  &
@@ -579,6 +579,7 @@
       ice_data_dist   = 'default' ! used by some tests to initialize ice state (distribution)
       bgc_data_dir    = 'unknown_bgc_data_dir'
       ocn_data_type   = 'default'
+      ocn_data_freq   = 'daily'
       ocn_data_dir    = 'unknown_ocn_data_dir'
       oceanmixed_file = 'unknown_oceanmixed_file' ! ocean forcing data
       restore_ocn     = .false.   ! restore sst if true
@@ -1184,6 +1185,7 @@
       call broadcast_scalar(ice_data_dist,        master_task)
       call broadcast_scalar(bgc_data_dir,         master_task)
       call broadcast_scalar(ocn_data_type,        master_task)
+      call broadcast_scalar(ocn_data_freq,        master_task)
       call broadcast_scalar(ocn_data_dir,         master_task)
       call broadcast_scalar(oceanmixed_file,      master_task)
       call broadcast_scalar(restore_ocn,          master_task)
@@ -2689,7 +2691,8 @@
             write(nu_diag,1031) ' wave_spec_file   = ', trim(wave_spec_file)
          endif
          if (trim(bgc_data_type) == 'ncar' .or. &
-             trim(ocn_data_type) == 'ncar') then
+             trim(ocn_data_type) == 'ncar' .or. &
+             trim(ocn_data_type) == 'AFIM') then
             write(nu_diag,1031) ' oceanmixed_file  = ', trim(oceanmixed_file)
          endif
          if (cpl_bgc) then
@@ -2709,6 +2712,7 @@
             write(nu_diag,1031) ' ocn_data_dir     = ', trim(ocn_data_dir)
             write(nu_diag,1011) ' restore_ocn      = ', restore_ocn
          endif
+         write(nu_diag,1031) ' ocn_data_freq    = ', trim(ocn_data_freq)
          write(nu_diag,1011) ' restore_ice      = ', restore_ice
          if (restore_ice .or. restore_ocn) &
          write(nu_diag,1021) ' trestore         = ', trestore

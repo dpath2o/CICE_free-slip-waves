@@ -154,7 +154,7 @@
 /
 
 &dynamics_nml
-    boundary_condition   = 'free_slip'
+    boundary_condition   = 'no_slip'
     coastal_drag         = .false.
     Cs                   = 1e-4
     u0                   = 5e-5
