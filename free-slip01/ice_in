@@ -8,7 +8,7 @@
     istep0               = 0
     dt                   = 1800.0
     npt_unit             = 'm'
-    npt                  = 24
+    npt                  = 3
     ndtd                 = 1
     runtype              = 'continue'
     ice_ic               = 'none'
@@ -304,7 +304,7 @@
     ice_data_type   = 'uniform'
     ice_data_conc   = 'p9'
     ice_data_dist   = 'uniform'
-    fyear_init      = 1994
+    fyear_init      = 1995
     ycycle          = 1
     atm_data_format = 'nc'
     atm_data_dir    = '/g/data/gv90/da1339/afim_input/ERA5/0p25/'
