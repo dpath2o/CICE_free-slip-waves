@@ -114,8 +114,8 @@
           grid_ocn, grid_ocn_thrm, grid_ocn_dynu, grid_ocn_dynv, &
           grid_atm, grid_atm_thrm, grid_atm_dynu, grid_atm_dynv, &
           dxrect, dyrect, dxscale, dyscale, scale_dxdy, &
-         lonrefrect, latrefrect, save_ghte_ghtn!, &
-         !  F2E, F2N
+          lonrefrect, latrefrect, save_ghte_ghtn, &
+          F2_file, F2x_var, F2y_var, F2_map_method, F2_test
       use ice_dyn_shared, only: &
           ndte, kdyn, revised_evp, yield_curve, &
           evp_algorithm, visc_method,     &
@@ -126,7 +126,7 @@
           ssh_stress, kridge, brlx, arlx,       &
           deltaminEVP, deltaminVP, capping,     &
           elasticDamp, dyn_area_min, dyn_mass_min, &
-          coastal_drag, boundary_condition, create_form_factors, coastal_drag_stress_factor, Cs, u0
+          coastal_drag, boundary_condition, coastal_drag_stress_factor, Cs, u0
       use ice_dyn_vp, only: &
           maxits_nonlin, precond, dim_fgmres, dim_pgmres, maxits_fgmres, &
           maxits_pgmres, monitor_nonlin, monitor_fgmres, &
@@ -222,7 +222,8 @@
         dxscale,        dyscale,         lonrefrect,    latrefrect,     &
         scale_dxdy,     grid_outfile,                                   &
         close_boundaries, orca_halogrid, grid_ice,      kmt_type,       &
-        grid_atm,       grid_ocn
+        grid_atm,       grid_ocn,                                       &
+        F2_file,        F2x_var,         F2y_var,       F2_map_method, F2_test
 
       namelist /tracer_nml/                                             &
         tr_iage, restart_age,                                           &
@@ -247,7 +248,7 @@
 
 
       namelist /dynamics_nml/ &
-        boundary_condition, coastal_drag, Cs, u0, create_form_factors,  &
+        boundary_condition, coastal_drag, Cs, u0,                       &
         kdyn,           ndte,           revised_evp,    yield_curve,    &
         evp_algorithm,  elasticDamp,                                    &
         brlx,           arlx,           ssh_stress,                     &
@@ -402,6 +403,11 @@
       kmt_type     = 'file'
       kmt_file     = 'unknown_kmt_file'
       version_name = 'unknown_version_name'
+      F2_file       = 'none'
+      F2x_var       = 'F2x'
+      F2y_var       = 'F2y'
+      F2_map_method = 'max'
+      F2_test       = .false.         ! creates form factors for box grid (test case)
       ncat  = 0          ! number of ice thickness categories
       nfsd  = 1          ! number of floe size categories (1 = default)
       nilyr = 0          ! number of vertical ice layers
@@ -416,7 +422,6 @@
       coastal_drag          = .false.         ! if true, enable coastal drag parameterisation for landfast ice
       Cs                    = 1.0e-4_dbl_kind ! see Liu et al. (2022) section 3.3
       u0                    = 5.0e-4_dbl_kind ! see Lemieux et al. (2015) section 6
-      create_form_factors   = .false.         ! creates form factors for box grid (test case)
       kdyn                  = 1               ! type of dynamics (-1, 0 = off, 1 = evp, 2 = eap, 3 = vp)
       ndtd                  = 1               ! dynamic time steps per thermodynamic time step
       ndte                  = 120             ! subcycles per dynamics timestep:  ndte=dt_dyn/dte
@@ -1028,14 +1033,18 @@
       call broadcast_scalar(use_bathymetry,       master_task)
       call broadcast_scalar(kmt_type,             master_task)
       call broadcast_scalar(kmt_file,             master_task)
+      call broadcast_scalar(F2_file,              master_task)
+      call broadcast_scalar(F2x_var,              master_task)
+      call broadcast_scalar(F2y_var,              master_task)
+      call broadcast_scalar(F2_map_method,        master_task)
+      call broadcast_scalar(F2_test,              master_task)
       call broadcast_scalar(kitd,                 master_task)
       call broadcast_scalar(kcatbound,            master_task)
       call broadcast_scalar(boundary_condition,   master_task)
       call broadcast_scalar(coastal_drag,         master_task)
       call broadcast_scalar(Cs,                   master_task)
       call broadcast_scalar(u0,                   master_task)
-      call broadcast_scalar(create_form_factors,  master_task)
-      if (coastal_drag .and. create_form_factors) then
+      if (coastal_drag) then
          write(nu_diag,'(a)') ' Using coastal form factor builder to construct F2E/F2N'
       endif
       call broadcast_scalar(kdyn,                 master_task)

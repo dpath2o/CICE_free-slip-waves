@@ -74,33 +74,38 @@
 /
 
 &grid_nml
-    grid_format  = 'nc'
-    grid_type    = 'tripole'
-    grid_ice     = 'C'
-    grid_atm     = 'A'
-    grid_ocn     = 'B'
-    grid_file    = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_Cgrid.nc'
-    kmt_type     = 'file'
-    kmt_file     = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_kmt.nc'
-    bathymetry_file = 'unknown_bathymetry_file'
+    grid_format       = 'nc'
+    grid_type         = 'tripole'
+    grid_ice          = 'C'
+    grid_atm          = 'A'
+    grid_ocn          = 'B'
+    grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_Cgrid.nc'
+    kmt_type          = 'file'
+    kmt_file          = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_kmt.nc'
+    bathymetry_file   = 'unknown_bathymetry_file'
     bathymetry_format = 'default'
-    use_bathymetry = .false.
-    gridcpl_file = 'unknown_gridcpl_file'
-    grid_outfile = .false.
-    kcatbound    = 0
-    dxrect         = 16.e5
-    dyrect         = 16.e5
-    lonrefrect    = -156.50d0
-    latrefrect    =   71.35d0
-    scale_dxdy     = .false.
-    dxscale        = 1.d0
-    dyscale        = 1.d0
-    close_boundaries = .true.
-    ncat         = 5
-    nfsd         = 1
-    nilyr        = 7
-    nslyr        = 1
-    nblyr        = 1
+    use_bathymetry    = .false.
+    gridcpl_file      = 'unknown_gridcpl_file'
+    grid_outfile      = .false.
+    F2_file           = '/g/data/gv90/da1339/coastlines/high_res_coast/AAD_high-res_cstln_v7p9.nc'
+    F2x_var           = 'F2x'
+    F2y_var           = 'F2y'
+    F2_map_method     = 'max'
+    F2_test           = .false.
+    kcatbound         = 0
+    dxrect            = 16.e5
+    dyrect            = 16.e5
+    lonrefrect        = -156.50d0
+    latrefrect        =   71.35d0
+    scale_dxdy        = .false.
+    dxscale           = 1.d0
+    dyscale           = 1.d0
+    close_boundaries  = .true.
+    ncat              = 5
+    nfsd              = 1
+    nilyr             = 7
+    nslyr             = 1
+    nblyr             = 1
 /
 
 &tracer_nml
@@ -158,7 +163,6 @@
     coastal_drag         = .false.
     Cs                   = 1e-4
     u0                   = 5e-5
-    create_form_factors  = .false.
     kdyn                 = 1
     ndte                 = 120
     revised_evp          = .false.

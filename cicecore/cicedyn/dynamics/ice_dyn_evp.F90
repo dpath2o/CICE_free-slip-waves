@@ -48,7 +48,7 @@
           uvel_init, vvel_init, uvelE_init, vvelE_init, uvelN_init, vvelN_init, &
           seabed_stress_factor_LKD, seabed_stress_factor_prob, seabed_stress_method, &
           seabed_stress, Ktens, revp, &
-          coastal_drag, boundary_condition, create_form_factors, coastal_drag_stress_factor, Cs, u0
+          coastal_drag, boundary_condition, coastal_drag_stress_factor, Cs, u0
       use ice_fileunits, only: nu_diag
       use ice_exit, only: abort_ice
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
@@ -130,10 +130,11 @@
       use ice_domain_size, only: max_blocks
       use ice_domain, only: nblocks, blocks_ice
       use ice_grid, only: grid_ice, dyT, dxT, uarear, tmask, G_HTE, G_HTN, dxN, dyE, &
-         build_F2_form_factors_cgrid, F2E, F2N   ! <- this is the only source of truth
+         build_F2_form_factors_cgrid, F2_file, F2x_var, F2y_var, F2_map_method, F2_test
+         ! build_F2_form_factors_cgrid, F2E, F2N   ! <- this is the only source of truth
       use ice_calendar, only: dt_dyn
       use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, &
-         iceEmask, iceNmask, coastal_drag, create_form_factors
+         iceEmask, iceNmask, coastal_drag
       use ice_dyn_evp1d, only: dyn_evp1d_init
 
 !allocate c and cd grid var. Follow structucre of eap
@@ -153,8 +154,13 @@
 
       !------------------------------------------------
       ! coastal drag masking and form factor construction
-      if (coastal_drag .and. create_form_factors) then
-         call build_F2_form_factors_cgrid(test_case=.true.)
+      if (coastal_drag) then
+         ! call build_F2_form_factors_cgrid(test_case=.true.)
+         call build_F2_form_factors_cgrid(coast_file   = F2_file, &
+                                          f2x_varname  = F2x_var, &
+                                          f2y_varname  = F2y_var, &
+                                          f2_map_in    = F2_map_method 
+                                          test_case    = F2_test)
       endif
 
       if (evp_algorithm == "shared_mem_1d" ) then

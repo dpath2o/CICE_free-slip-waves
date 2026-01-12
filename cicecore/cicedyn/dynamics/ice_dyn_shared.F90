@@ -145,8 +145,7 @@
 
       ! coastal drag parameters and settings
       logical (kind=log_kind), public :: &
-         coastal_drag, &     ! if true, coastal drag stress for landfast on
-         create_form_factors ! if true, create the coastal form factors using the coastline
+         coastal_drag       ! if true, coastal drag stress for landfast on
 
       real(kind=dbl_kind), dimension (:,:,:), allocatable, public :: &
          KuU , KuE , KuN, &
