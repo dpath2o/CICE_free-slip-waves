@@ -130,8 +130,7 @@
       use ice_domain_size, only: max_blocks
       use ice_domain, only: nblocks, blocks_ice
       use ice_grid, only: grid_ice, dyT, dxT, uarear, tmask, G_HTE, G_HTN, dxN, dyE, &
-         build_F2_form_factors_cgrid, F2_file, F2x_var, F2y_var, F2_map_method, F2_test
-         ! build_F2_form_factors_cgrid, F2E, F2N   ! <- this is the only source of truth
+         load_F2_form_factors
       use ice_calendar, only: dt_dyn
       use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, &
          iceEmask, iceNmask, coastal_drag
@@ -153,14 +152,9 @@
       call init_dyn_shared(dt_dyn)
 
       !------------------------------------------------
-      ! coastal drag masking and form factor construction
+      ! form factor load or test case scenario (uniform grid)
       if (coastal_drag) then
-         ! call build_F2_form_factors_cgrid(test_case=.true.)
-         call build_F2_form_factors_cgrid(coast_file   = F2_file, &
-                                          f2x_varname  = F2x_var, &
-                                          f2y_varname  = F2y_var, &
-                                          f2_map_in    = F2_map_method 
-                                          test_case    = F2_test)
+         call load_F2_form_factors()
       endif
 
       if (evp_algorithm == "shared_mem_1d" ) then
@@ -805,18 +799,14 @@
             ! ----------------------------------------------------------------------
             !$OMP PARALLEL DO PRIVATE(iblk) SCHEDULE(runtime)
             do iblk = 1, nblocks
-               call coastal_drag_stress_factor(nx_block          , ny_block,         &
-                                               ! icellE  (iblk)    ,                   &
-                                               ! indxEi  (:,iblk)  , indxEj(:,iblk),   &
-                                               emass   (:,:,iblk),                   &
-                                               KuE     (:,:,iblk),                   &
-                                               F2E(:,:,iblk)                         )
-               call coastal_drag_stress_factor(nx_block          , ny_block,         &
-                                               ! icellN  (iblk)    ,                   &
-                                               ! indxNi  (:,iblk)  , indxNj(:,iblk),   &
-                                               nmass   (:,:,iblk),                   &
-                                               KuN     (:,:,iblk),                   &
-                                               F2N(:,:,iblk)                         )
+               call coastal_drag_stress_factor(nx_block          , ny_block, &
+                                               emass   (:,:,iblk),           &
+                                               KuE     (:,:,iblk),           &
+                                               F2E     (:,:,iblk))
+               call coastal_drag_stress_factor(nx_block          , ny_block, &
+                                               nmass   (:,:,iblk),           &
+                                               KuN     (:,:,iblk),           &
+                                               F2N     (:,:,iblk))
             enddo
             !$OMP END PARALLEL DO
          endif

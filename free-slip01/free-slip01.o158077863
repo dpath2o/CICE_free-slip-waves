@@ -1,0 +1,51 @@
+module: Command not found.
+module: Command not found.
+module: Command not found.
+module: Command not found.
+module: Command not found.
+module: Command not found.
+module: Command not found.
+module: Command not found.
+ 
+./cice.run:
+module: Command not found.
+module: Command not found.
+module: Command not found.
+module: Command not found.
+domain_nml in ICE_RUNDIR ice_in:
+324:&domain_nml
+325:    nprocs            = 1232
+ 
+CICE case directory is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01
+CICE rundir is /g/data/gv90/da1339/cice-dirs/runs/free-slip01
+CICE log file is cice.runlog.260112-235253
+CICE run started : Mon Jan 12 23:52:53 AEDT 2026
+CICE running on 1232 CPUs
+mpirun: mpirun: Command not found.
+mpirun: Command not found.
+MPI libraries linked into ./cice:
+	libmpi_usempif08_Intel.so.40 => /apps/openmpi/4.1.7/lib/libmpi_usempif08_Intel.so.40 (0x000014ce49110000)
+	libmpi_usempi_ignore_tkr_Intel.so.40 => /apps/openmpi/4.1.7/lib/libmpi_usempi_ignore_tkr_Intel.so.40 (0x000014ce48ef7000)
+	libmpi_mpifh_Intel.so.40 => /apps/openmpi/4.1.7/lib/libmpi_mpifh_Intel.so.40 (0x000014ce48c63000)
+	libmpi.so.40 => /apps/openmpi/4.1.7/lib/libmpi.so.40 (0x000014ce4872c000)
+	libopen-rte.so.40 => /apps/openmpi-mofed5.8-pbs2021.1/4.1.7/lib/libopen-rte.so.40 (0x000014ce431b0000)
+	libopen-pal.so.40 => /apps/openmpi-mofed5.8-pbs2021.1/4.1.7/lib/libopen-pal.so.40 (0x000014ce429b2000)
+CICE run finished: Tue Jan 13 02:51:56 AEDT 2026
+ 
+CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260112-235253
+CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+ CICE COMPLETED SUCCESSFULLY 
+CICE run completed successfully
+
+======================================================================================
+                  Resource Usage on 2026-01-13 02:52:05:
+   Job Id:             158077863.gadi-pbs
+   Project:            gv90
+   Exit Status:        255
+   Service Units:      4599.47
+   NCPUs Requested:    1232                   NCPUs Used: 1232            
+                                           CPU Time Used: 3672:27:33      
+   Memory Requested:   700.0GB               Memory Used: 357.5GB         
+   Walltime requested: 06:00:00            Walltime Used: 02:59:12        
+   JobFS requested:    4.3GB                  JobFS used: 8.1MB           
+======================================================================================

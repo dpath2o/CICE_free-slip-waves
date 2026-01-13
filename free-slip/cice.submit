@@ -1,6 +1,6 @@
 #!/bin/csh -f
 #PBS -q normalbw
-#PBS -P jk72
+#PBS -P gv90
 #PBS -N free-slip
 #PBS -l storage=gdata/gv90+scratch/gv90+gdata/ik11+gdata/xp65
 #PBS -l ncpus=1232

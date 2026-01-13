@@ -115,7 +115,7 @@
           grid_atm, grid_atm_thrm, grid_atm_dynu, grid_atm_dynv, &
           dxrect, dyrect, dxscale, dyscale, scale_dxdy, &
           lonrefrect, latrefrect, save_ghte_ghtn, &
-          F2_file, F2x_var, F2y_var, F2_map_method, F2_test
+          F2_file, F2x_varname, F2y_varname, F2_map_method, F2_test, F2_test_val
       use ice_dyn_shared, only: &
           ndte, kdyn, revised_evp, yield_curve, &
           evp_algorithm, visc_method,     &
@@ -223,7 +223,8 @@
         scale_dxdy,     grid_outfile,                                   &
         close_boundaries, orca_halogrid, grid_ice,      kmt_type,       &
         grid_atm,       grid_ocn,                                       &
-        F2_file,        F2x_var,         F2y_var,       F2_map_method, F2_test
+        F2_file,        F2x_varname,         F2y_varname,       F2_map_method,  &
+        F2_test,        F2_test_val
 
       namelist /tracer_nml/                                             &
         tr_iage, restart_age,                                           &
@@ -403,11 +404,12 @@
       kmt_type     = 'file'
       kmt_file     = 'unknown_kmt_file'
       version_name = 'unknown_version_name'
-      F2_file       = 'none'
-      F2x_var       = 'F2x'
-      F2y_var       = 'F2y'
-      F2_map_method = 'max'
+      F2_file       = 'unknown_form_factor_file'
+      F2x_varname   = 'F2x'
+      F2y_varname   = 'F2y'
+      F2_map_method = 'max' ! {'max','avg'}
       F2_test       = .false.         ! creates form factors for box grid (test case)
+      F2_test_val   = 0.25_dbl_kind   ! for the test case, the form factor static test value
       ncat  = 0          ! number of ice thickness categories
       nfsd  = 1          ! number of floe size categories (1 = default)
       nilyr = 0          ! number of vertical ice layers
@@ -1034,19 +1036,17 @@
       call broadcast_scalar(kmt_type,             master_task)
       call broadcast_scalar(kmt_file,             master_task)
       call broadcast_scalar(F2_file,              master_task)
-      call broadcast_scalar(F2x_var,              master_task)
-      call broadcast_scalar(F2y_var,              master_task)
+      call broadcast_scalar(F2x_varname,          master_task)
+      call broadcast_scalar(F2y_varname,          master_task)
       call broadcast_scalar(F2_map_method,        master_task)
       call broadcast_scalar(F2_test,              master_task)
+      call broadcast_scalar(F2_test_val,          master_task)
       call broadcast_scalar(kitd,                 master_task)
       call broadcast_scalar(kcatbound,            master_task)
       call broadcast_scalar(boundary_condition,   master_task)
       call broadcast_scalar(coastal_drag,         master_task)
       call broadcast_scalar(Cs,                   master_task)
       call broadcast_scalar(u0,                   master_task)
-      if (coastal_drag) then
-         write(nu_diag,'(a)') ' Using coastal form factor builder to construct F2E/F2N'
-      endif
       call broadcast_scalar(kdyn,                 master_task)
       call broadcast_scalar(ndtd,                 master_task)
       call broadcast_scalar(ndte,                 master_task)

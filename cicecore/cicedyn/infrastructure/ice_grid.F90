@@ -51,7 +51,7 @@
       public :: init_grid1, init_grid2, grid_average_X2Y, makemask, &
                 alloc_grid, dealloc_grid, &
                 grid_neighbor_min, grid_neighbor_max, &
-                build_F2_form_factors_cgrid
+                load_F2_form_factors
 
       character (len=char_len_long), public :: &
          grid_format  , & ! file format ('bin'=binary or 'pop_nc'= pop netcdf or 'mom_nc'=mom (supergrid) netcdf)
@@ -175,19 +175,22 @@
       character (len=char_len), private :: &
          mask_fieldname !field/var name for the mask variable (in nc files)
 
-      ! coastal drag form factors
+      ! COASTAL DRAG -- requires C-grid
       real(kind=dbl_kind), dimension (:,:,:), allocatable, save, public :: &
-         F2E, & ! coastal drag form factors on E-points 
-         F2N    ! coastal drag form factors on N-points
-
-      ! Optional: precomputed coastal-drag form factors (Liu et al. 2022 F2)
+         F2E, & ! form factors on E-points 
+         F2N    ! form factors on N-points
+      ! loading precomputed form factors
       character (len=char_len_long), public :: &
-         F2_file          ! NetCDF file containing F2 projections (e.g., AAD_high-res_cstln_v7p9.nc)
-
+         F2_file            ! NetCDF file containing F2 projections (e.g., AAD_high-res_cstln_v7p9.nc)
       character (len=char_len), public :: &
-         F2x_var          , & ! var name in F2_file for x-projection (default 'F2x')
-         F2y_var          , & ! var name in F2_file for y-projection (default 'F2y')
-         F2_map_method        ! mapping T->(E,N): 'max' (default) or 'avg'
+         F2x_varname    , & ! var name in F2_file for x-projection (default 'F2x')
+         F2y_varname    , & ! var name in F2_file for y-projection (default 'F2y')
+         F2_map_method      ! mapping T->(E,N): 'max' (default) or 'avg'
+      ! testing form factors on a uniform grid
+      logical (kind=log_kind), public :: &
+         F2_test            ! enable/disable test case scenario on uniform grid
+      real (kind=dbl_kind), public :: &
+         F2_test_val        ! static form factor value (0<F2<1) for test case scenario
 
       interface grid_average_X2Y
          module procedure grid_average_X2Y_base , &
@@ -2619,158 +2622,122 @@
 
       end subroutine rectgrid_scale_dxdy
 
-!=======================================================================
-! subroutine build_F2_form_factors_cgrid(coast_file, coast_var, F2_value, test_case)
-   subroutine build_F2_form_factors_cgrid(coast_file, coast_var, f2x_varname, f2y_varname, f2_map_in, test_case)
+   !=======================================================================
+   subroutine load_F2_form_factors()
       use ice_kinds_mod
-      use ice_blocks     , only: get_block, nx_block, ny_block, block
-      use ice_domain     , only: nblocks, blocks_ice, halo_info
-      use ice_domain_size, only: max_blocks
-      use ice_fileunits  , only: nu_diag
-#ifdef _NETCDF
-      use netcdf
-#endif
+      use ice_gather_scatter , only: scatter_global
+      use ice_domain         , only: distrb_info, ew_boundary_type, nblocks, blocks_ice, halo_info
+      use ice_domain_size    , only: nx_global, ny_global, max_blocks
+      use ice_blocks         , only: get_block, nx_block, ny_block, block
+      use ice_constants      , only: field_loc_Eface, field_loc_Nface, field_type_scalar
+      use ice_fileunits      , only: nu_diag
       implicit none
-      ! ----- optional inputs -----
-      character(len=*),         intent(in), optional :: f2x_varname, f2y_varname, f2_map_in
-      character(len=*),         intent(in), optional :: coast_file  ! T-grid mask file (0=land,1=ocean)
-      character(len=*),         intent(in), optional :: coast_var   ! var name in coast_file
-      real   (kind=dbl_kind),   intent(in), optional :: F2_value    ! default 0.25
-      logical(kind=log_kind),   intent(in), optional :: test_case   ! if true and no coast_file, treat perimeter as coastline   
       ! ----- locals -----
-      type(block)               :: this_block
-      integer(kind=int_kind)    :: iblk, i, j, ilo, ihi, jlo, jhi
-      integer(kind=int_kind)    :: nW, nE, nS, nN !ilE, ihE, jlE, jhE, ilN, ihN, jlN, jhN, iW, iE, jS, jN, 
-      integer(kind=int_kind)    :: cntW, cntE, cntS, cntNside
-      logical(kind=log_kind)    :: use_coast, want_perimeter
-      real   (kind=dbl_kind)    :: F2_val
-      integer(kind=int_kind)    :: ncid, varid, ierr
-      character(len=64)         :: vname
-      real   (kind=dbl_kind), allocatable :: coastT(:,:)    ! per-block T-grid coastline
-      logical(kind=log_kind)    :: oceL, oceR, oceS, oceN
-      integer(kind=int_kind)    :: cntE_adj, cntN_adj, cntE_act, cntN_act
-      integer(kind=int_kind)    :: setE, setN
-      logical (kind=log_kind)   :: use_precomputed
-      character(len=char_len)   :: vname_x, vname_y, map_method
-      ! ----- config -----
-      F2_val = merge(F2_value, 0.25d0, present(F2_value))
-      vname  = 'coastmask'
-      if (present(coast_var)) vname = trim(coast_var)
-      ! Default perimeter behavior:
-      ! - if user passed test_case, honor it
-      ! - else we will AUTO-enable later if no adjacencies are found with tmask
-      want_perimeter = .false.; if (present(test_case)) want_perimeter = test_case
-      ! ----- allocate/clear outputs -----
-      F2E = c0
-      F2N = c0
-      ! ----- choose coastline source -----
-      use_coast       = .false.
-      use_precomputed = .false.
-      vname_x         = 'F2x'
-      vname_y         = 'F2y'
-      map_method      = 'max'
-      if (present(f2x_varname)) vname_x    = trim(f2x_varname)
-      if (present(f2y_varname)) vname_y    = trim(f2y_varname)
-      if (present(f2_map_in))   map_method = trim(f2_map_in)
-      if (present(coast_file)) then
-         if (len_trim(coast_file) > 0 .and. trim(coast_file) /= 'none') then
-            if (present(f2x_varname) .and. present(f2y_varname)) then
-               use_precomputed = .true.
-            endif
-         endif
+      type(block)                      :: this_block
+      integer(kind=int_kind)           :: iblk, i, j, ilo, ihi, jlo, jhi, ip1, jp1
+      integer(kind=int_kind)           :: nW, nE, nS, nN
+      integer(kind=int_kind)           :: ncid, varid, ierr
+      integer(kind=int_kind)           :: cntE_adj, cntN_adj, cntE_act, cntN_act
+      integer(kind=int_kind)           :: setE, setN 
+      integer (kind=int_kind)          :: fid_F2        ! file id for netCDF init file
+      logical(kind=log_kind)           :: use_F2_file, diag
+      real(kind=dbl_kind), allocatable :: F2x_in(:,:), F2x_out(:,:)
+      real(kind=dbl_kind), allocatable :: F2y_in(:,:), F2y_out(:,:)
+      ! ------ allocate -----
+      if (my_task == master_task) then
+         allocate(F2x_in(nx_global, ny_global),  F2x_out(nx_global, ny_global))
+         allocate(F2y_in(nx_global, ny_global),  F2y_out(nx_global, ny_global))
+      else
+         allocate(F2x_in(1,1), F2x_out(1,1))
+         allocate(F2y_in(1,1), F2y_out(1,1))
       endif
-      if (use_precomputed) then
-#ifdef _NETCDF
-         integer (kind=int_kind) :: ncid, varid, ierr_netcdf
-         real (kind=dbl_kind), allocatable :: work_in(:,:), work_out(:,:)
-         integer (kind=int_kind) :: i, j, ip1, jp1
-         allocate(work_in(nx_global, ny_global))
-         allocate(work_out(nx_global, ny_global))
-         work_in  = c0
-         work_out = c0
+      F2E         = c0
+      F2N         = c0
+      use_F2_file = .false.
+      diag        = .false.
+      if (.not. F2_test) then
+         if (len_trim(F2_file) > 0 .and. trim(F2_file) /= 'none' .and. &
+            trim(F2_file) /= 'unknown_form_factor_file') then
+            use_F2_file = .true.
+         end if
+      end if
+      if (use_F2_file) then
+         F2x_in  = c0
+         F2x_out = c0
+         F2y_in  = c0
+         F2y_out = c0
          ! -------------------------
-         ! Read F2x -> map to E grid
+         ! Read F2x 
          ! -------------------------
          if (my_task == master_task) then
-            ierr_netcdf = nf90_open(trim(coast_file), NF90_NOWRITE, ncid)
-            if (ierr_netcdf /= NF90_NOERR) then
-               call abort_ice('F2_file open failed: '//trim(coast_file)//' : '//trim(nf90_strerror(ierr_netcdf)))
-            endif
-            ierr_netcdf = nf90_inq_varid(ncid, trim(vname_x), varid)
-            if (ierr_netcdf /= NF90_NOERR) then
-               call abort_ice('Missing '//trim(vname_x)//' in '//trim(coast_file))
-            endif
-            ierr_netcdf = nf90_get_var(ncid, varid, work_in)
-            if (ierr_netcdf /= NF90_NOERR) then
-               call abort_ice('Read failed for '//trim(vname_x)//' in '//trim(coast_file))
-            endif
+            write(nu_diag,*) ' '
+            write(nu_diag,*) 'Pre-computed F2 form factor file: ', trim(F2_file)
+            call icepack_warnings_flush(nu_diag)
+         endif
+         call ice_open_nc(F2_file,fid_F2)
+         call ice_read_nc(fid_F2, F2x_varname, F2x_in, diag, nx_global, ny_global)
+         call ice_read_nc(fid_F2, F2y_varname, F2y_in, diag, nx_global, ny_global)
+         call ice_close_nc(fid_F2)
+         if (my_task == master_task) then
+            write (nu_diag,*) '   pre-computed form factors read-into memory'
+            call icepack_warnings_flush(nu_diag)
+         endif
+         if (my_task == master_task) then
             ! NaN -> 0
             do j=1, ny_global
                do i=1, nx_global
-                  if (work_in(i,j) /= work_in(i,j)) work_in(i,j) = c0
+                  if (F2x_in(i,j) /= F2x_in(i,j)) F2x_in(i,j) = c0
+                  if (F2y_in(i,j) /= F2y_in(i,j)) F2y_in(i,j) = c0
                enddo
             enddo
-            work_out = c0
+            ! Map T-projection -> faces
+            F2x_out = c0
+            F2y_out = c0
+            ! E-faces: i=1..nx_global-1 (or nx_global wraps to 1 if cyclic); non-cyclic last column -> 0
             do j=1, ny_global
-               do i=1, nx_global
-                  ip1 = i + 1
-                  if (ip1 > nx_global) then
-                     if (trim(ew_boundary_type) == 'cyclic') then
-                        ip1 = 1
-                     else
-                        ip1 = nx_global
-                     endif
-                  endif
-                  if (trim(map_method) == 'avg') then
-                     work_out(i,j) = 0.5_dbl_kind * (max(work_in(i,j),c0) + max(work_in(ip1,j),c0))
+               do i=1, nx_global-1
+                  if (trim(F2_map_method) == 'avg') then
+                     F2x_out(i,j) = 0.5_dbl_kind * (max(F2x_in(i,j),c0) + max(F2x_in(i+1,j),c0))
                   else
-                     work_out(i,j) = max( max(work_in(i,j),c0), max(work_in(ip1,j),c0) )
+                     F2x_out(i,j) = max( max(F2x_in(i,j),c0), max(F2x_in(i+1,j),c0) )
                   endif
                enddo
-            enddo
-            ierr_netcdf = nf90_close(ncid)
-         endif
-         call scatter_global(F2E, work_out, master_task, distrb_info, field_loc_Eface, field_type_scalar)
-         ! -------------------------
-         ! Read F2y -> map to N grid
-         ! -------------------------
-         work_in  = c0
-         work_out = c0
-         if (my_task == master_task) then
-            ierr_netcdf = nf90_open(trim(coast_file), NF90_NOWRITE, ncid)
-            ierr_netcdf = nf90_inq_varid(ncid, trim(vname_y), varid)
-            if (ierr_netcdf /= NF90_NOERR) then
-               call abort_ice('Missing '//trim(vname_y)//' in '//trim(coast_file))
-            endif
-            ierr_netcdf = nf90_get_var(ncid, varid, work_in)
-            if (ierr_netcdf /= NF90_NOERR) then
-               call abort_ice('Read failed for '//trim(vname_y)//' in '//trim(coast_file))
-            endif
-            do j=1, ny_global
-               do i=1, nx_global
-                  if (work_in(i,j) /= work_in(i,j)) work_in(i,j) = c0
-               enddo
-            enddo
-            do j=1, ny_global
-               jp1 = min(j+1, ny_global)
-               do i=1, nx_global
-                  if (trim(map_method) == 'avg') then
-                     work_out(i,j) = 0.5_dbl_kind * (max(work_in(i,j),c0) + max(work_in(i,jp1),c0))
+               if (trim(ew_boundary_type) == 'cyclic') then
+                  i = nx_global
+                  if (trim(F2_map_method) == 'avg') then
+                     F2x_out(i,j) = 0.5_dbl_kind * (max(F2x_in(i,j),c0) + max(F2x_in(1,j),c0))
                   else
-                     work_out(i,j) = max( max(work_in(i,j),c0), max(work_in(i,jp1),c0) )
+                     F2x_out(i,j) = max( max(F2x_in(i,j),c0), max(F2x_in(1,j),c0) )
+                  endif
+               else
+                  F2x_out(nx_global,j) = c0
+               endif
+            enddo
+            ! N-faces: j=1..ny_global-1 ; last row -> 0
+            do j=1, ny_global-1
+               do i=1, nx_global
+                  if (trim(F2_map_method) == 'avg') then
+                     F2y_out(i,j) = 0.5_dbl_kind * (max(F2y_in(i,j),c0) + max(F2y_in(i,j+1),c0))
+                  else
+                     F2y_out(i,j) = max( max(F2y_in(i,j),c0), max(F2y_in(i,j+1),c0) )
                   endif
                enddo
             enddo
-            ierr_netcdf = nf90_close(ncid)
+            do i=1, nx_global
+               F2y_out(i,ny_global) = c0
+            enddo
          endif
-         call scatter_global(F2N, work_out, master_task, distrb_info, field_loc_Nface, field_type_scalar)
-         deallocate(work_in, work_out)
+         call scatter_global(F2E, F2x_out, master_task, distrb_info, field_loc_Eface, field_type_scalar)
+         call scatter_global(F2N, F2y_out, master_task, distrb_info, field_loc_Nface, field_type_scalar)
+         if (allocated(F2x_in)) deallocate(F2x_in, F2x_out)
+         if (allocated(F2y_in)) deallocate(F2y_in, F2y_out)
          ! Safety: zero land velocity points
          do iblk = 1, nblocks
-            ilo = blocks_ice(iblk)%ilo
-            ihi = blocks_ice(iblk)%ihi
-            jlo = blocks_ice(iblk)%jlo
-            jhi = blocks_ice(iblk)%jhi
+            this_block = get_block(blocks_ice(iblk), iblk)
+            ilo = this_block%ilo
+            ihi = this_block%ihi
+            jlo = this_block%jlo
+            jhi = this_block%jhi
             do j=jlo, jhi
                do i=ilo, ihi
                   if (.not. emask(i,j,iblk)) F2E(i,j,iblk) = c0
@@ -2781,144 +2748,43 @@
          call ice_HaloUpdate(F2E, halo_info, field_loc_Eface, field_type_scalar, fillValue=c0)
          call ice_HaloUpdate(F2N, halo_info, field_loc_Nface, field_type_scalar, fillValue=c0)
          if (my_task == master_task) then
-            write(nu_diag,*) 'Loaded F2 from file: ', trim(coast_file)
-            write(nu_diag,*) '  ', trim(vname_x), ' -> F2E ; ', trim(vname_y), ' -> F2N ; map=', trim(map_method)
+            write(nu_diag,*) 'Loaded F2 from file: ', trim(F2_file)
+            write(nu_diag,*) '  ', F2x_varname, ' -> F2E ; ',F2y_varname, ' -> F2N ; map_meth=', trim(F2_map_method)
          endif
          return
-#else
-         call abort_ice('F2_file provided but _NETCDF not enabled at compile time')
-#endif
       endif
-! #ifdef _NETCDF
-!    if (present(coast_file)) then
-!       ierr = nf90_open(trim(coast_file), NF90_NOWRITE, ncid)
-!       if (ierr == NF90_NOERR) then
-!          allocate(coastT(nx_block,ny_block))
-!          ierr = nf90_inq_varid(ncid, trim(vname), varid)
-!          if (ierr == NF90_NOERR) then
-!             ierr = nf90_get_var(ncid, varid, coastT)
-!             if (ierr == NF90_NOERR) then
-!                use_coast = .true.
-!                write(nu_diag,'(a,1x,a,1x,a)') 'build_F2: using coastline from', trim(coast_file), trim(vname)
-!             else
-!                write(nu_diag,'(a,i0)') 'build_F2: coast get_var failed; fallback to tmask; ierr=', ierr
-!                deallocate(coastT)
-!             end if
-!          else
-!             write(nu_diag,'(a,1x,a,1x,i0)') 'build_F2: coast var not found:', trim(vname), ierr
-!             deallocate(coastT)
-!          end if
-!          call nf90_close(ncid)
-!       else
-!          write(nu_diag,'(a,1x,a,1x,i0)') 'build_F2: coast file open failed:', trim(coast_file), ierr
-!       end if
-!    else
-!       write(nu_diag,'(a)') 'build_F2: no coast_file; using tmask.'
-!    end if
-! #else
-!    if (present(coast_file)) then
-!       write(nu_diag,'(a)') 'build_F2: NETCDF not enabled; ignoring coast_file and using tmask.'
-!    else
-!       write(nu_diag,'(a)') 'build_F2: tmask fallback (no coast_file).'
-!    end if
-! #endif
-      ! ----- main pass: forward differences on T grid (find E/N adjacencies) -----
-      cntE_adj = 0;  cntN_adj = 0
-!$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi,i,j,oceL,oceR,oceS,oceN) SCHEDULE(runtime) REDUCTION(+:cntE_adj,cntN_adj)
-      do iblk = 1, nblocks
-         this_block = get_block(blocks_ice(iblk), iblk)
-         ilo = this_block%ilo;  ihi = this_block%ihi
-         jlo = this_block%jlo;  jhi = this_block%jhi
-         ! E faces: compare T(i,j) vs T(i+1,j)
-         do j = jlo, jhi
-            do i = ilo, ihi-1
-#ifdef _NETCDF
-               if (use_coast) then
-                  oceL = (coastT(i    ,j) > 0.5d0)
-                  oceR = (coastT(i + 1,j) > 0.5d0)
-               else
-#endif
-                  oceL = tmask(i    ,j,iblk)
-                  oceR = tmask(i + 1,j,iblk)
-#ifdef _NETCDF
-               end if
-#endif
-               if (oceL .neqv. oceR) then
-                  F2E(i,j,iblk) = F2_val
-                  cntE_adj = cntE_adj + 1
-               end if
-            end do
-         end do
-         ! N faces: compare T(i,j) vs T(i,j+1)
-         do j = jlo, jhi-1
-            do i = ilo, ihi
-#ifdef _NETCDF
-               if (use_coast) then
-                  oceS = (coastT(i,j    ) > 0.5d0)
-                  oceN = (coastT(i,j + 1) > 0.5d0)
-               else
-#endif
-                  oceS = tmask(i,j    ,iblk)
-                  oceN = tmask(i,j + 1,iblk) 
-#ifdef _NETCDF
-               end if
-#endif
-               if (oceS .neqv. oceN) then
-                  F2N(i,j,iblk) = F2_val
-                  cntN_adj = cntN_adj + 1
-               end if
-            end do
-         end do
-      end do
-!$OMP END PARALLEL DO
-      ! ----- edge completion (fills W/S using halos; writes interior faces only) -----
-!$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi,i,j,oceL,oceR,oceS,oceN) SCHEDULE(runtime)
-      do iblk = 1, nblocks
-         this_block = get_block(blocks_ice(iblk), iblk)
-         ilo = this_block%ilo;  ihi = this_block%ihi
-         jlo = this_block%jlo;  jhi = this_block%jhi
-         ! West/East vertical faces (E-grid)
-         do j = jlo, jhi
-            oceL = tmask(ilo-1,j,iblk);  oceR = tmask(ilo  ,j,iblk)
-            if (oceL .neqv. oceR) F2E(ilo  ,j,iblk) = F2_val   ! WEST at i=ilo
-            oceL = tmask(ihi-1,j,iblk);  oceR = tmask(ihi  ,j,iblk)
-            if (oceL .neqv. oceR) F2E(ihi-1,j,iblk) = F2_val   ! EAST at i=ihi-1
-         end do
-         ! South/North horizontal faces (N-grid)
-         do i = ilo, ihi
-            oceS = tmask(i,jlo-1,iblk);  oceN = tmask(i,jlo  ,iblk)
-            if (oceS .neqv. oceN) F2N(i,jlo  ,iblk) = F2_val   ! SOUTH at j=jlo
-            oceS = tmask(i,jhi-1,iblk);  oceN = tmask(i,jhi  ,iblk)
-            if (oceS .neqv. oceN) F2N(i,jhi-1,iblk) = F2_val   ! NORTH at j=jhi-1
-         end do
-      end do
-!$OMP END PARALLEL DO
-      ! ----- perimeter fallback (pure-ocean box or explicit test_case) -----
-      if (.not. use_coast) then
-         if ( (cntE_adj + cntN_adj) == 0 .or. want_perimeter ) then
-            write(nu_diag,'(a)') 'build_F2: perimeter treated as coastline (fallback mode).'
+      ! ----- perimeter fallback (pure-ocean box or explicit F2_test) -----
+      cntE_adj = 0
+      cntN_adj = 0
+      if (F2_test) then
+         if ( (cntE_adj + cntN_adj) == 0) then ! .or. want_perimeter ) then
+            write(nu_diag,'(a)') 'build_F2: "test case"; perimeter treated as coastline (fallback mode); uniform form factors'
 !$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi,i,j) SCHEDULE(runtime)
             do iblk = 1, nblocks
                this_block = get_block(blocks_ice(iblk), iblk)
                ilo = this_block%ilo;  ihi = this_block%ihi
                jlo = this_block%jlo;  jhi = this_block%jhi
                do j = jlo, jhi
-                  F2E(ilo  ,j,iblk) = F2_val    ! west interior E-face
-                  F2E(ihi-1,j,iblk) = F2_val    ! east interior E-face
+                  F2E(ilo  ,j,iblk) = F2_test_val    ! west interior E-face
+                  F2E(ihi-1,j,iblk) = F2_test_val    ! east interior E-face
                end do
                do i = ilo, ihi
-                  F2N(i,jlo  ,iblk) = F2_val    ! south interior N-face
-                  F2N(i,jhi-1,iblk) = F2_val    ! north interior N-face
+                  F2N(i,jlo  ,iblk) = F2_test_val    ! south interior N-face
+                  F2N(i,jhi-1,iblk) = F2_test_val    ! north interior N-face
                end do
             end do
 !$OMP END PARALLEL DO
          end if
       end if
    ! ----- diagnostics -----
-      setE = count(F2E > c0)
-      setN = count(F2N > c0)
-      nW = 0; nE = 0; nS = 0; nN = 0
-      cntE_act = 0; cntN_act = 0
+      setE     = count(F2E > c0)
+      setN     = count(F2N > c0)
+      nW       = 0
+      nE       = 0
+      nS       = 0
+      nN       = 0
+      cntE_act = 0
+      cntN_act = 0
 !$OMP PARALLEL DO PRIVATE(iblk,this_block,ilo,ihi,jlo,jhi) REDUCTION(+:cntE_act,cntN_act,nW,nE,nS,nN)
       do iblk = 1, nblocks
          this_block = get_block(blocks_ice(iblk), iblk)
@@ -2933,8 +2799,8 @@
       end do
 !$OMP END PARALLEL DO
       if (my_task==master_task) then
-         write(nu_diag,'(a,l1,a,i10,a,i10)') 'build_F2: use_coast=', use_coast,  &
-            '  F2E faces active=', cntE_act, '  F2E coast-adj=', cntE_adj
+         write(nu_diag,'(a,l1,a,i10,a,i10)') 'build_F2: F2E faces active=', cntE_act, &
+            '  F2E coast-adj=', cntE_adj
          write(nu_diag,'(a,a,i10,a,i10)') 'build_F2: counts  F2N faces active=',  &
             ' ', cntN_act, '  F2N coast-adj=', cntN_adj
          write(nu_diag,'(a,i10,a,i10)') 'build_F2: faces set:  F2E=', setE, '  F2N=', setN
@@ -2942,12 +2808,9 @@
             minval(F2E), maxval(F2E), '  F2N(min,max)=', minval(F2N), maxval(F2N)
          write(nu_diag,'(a,4(i0,1x))') 'build_F2: edge counts W/E/S/N =', nW, nE, nS, nN
       end if
-      if (use_coast) then
-         if (allocated(coastT)) deallocate(coastT)
-      end if
       call ice_HaloUpdate(F2E, halo_info, field_loc_Eface, field_type_scalar, fillValue=c0)
       call ice_HaloUpdate(F2N, halo_info, field_loc_Nface, field_type_scalar, fillValue=c0)
-   end subroutine build_F2_form_factors_cgrid
+   end subroutine load_F2_form_factors
 
 !=======================================================================
       ! Complex land mask for testing box cases

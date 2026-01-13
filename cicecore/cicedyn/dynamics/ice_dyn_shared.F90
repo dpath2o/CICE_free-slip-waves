@@ -246,20 +246,18 @@
          !---------------------------------------------------------
          ! Allocate and initialise coastal drag coefficient fields
          !---------------------------------------------------------
-         !if (coastal_drag) then
-            allocate( &
-                     KuU  (nx_block,ny_block,max_blocks), &
-                     KuE  (nx_block,ny_block,max_blocks), &
-                     KuN  (nx_block,ny_block,max_blocks), &
-                     KuxU (nx_block,ny_block,max_blocks), &
-                     KuyU (nx_block,ny_block,max_blocks), &
-                     KuxE (nx_block,ny_block,max_blocks), &
-                     KuyE (nx_block,ny_block,max_blocks), &
-                     KuxN (nx_block,ny_block,max_blocks), &
-                     KuyN (nx_block,ny_block,max_blocks), &
-                     stat=ierr)
-            if (ierr/=0) call abort_ice(subname//': Out of memory')  
-         !end if
+         allocate( &
+                  KuU  (nx_block,ny_block,max_blocks), &
+                  KuE  (nx_block,ny_block,max_blocks), &
+                  KuN  (nx_block,ny_block,max_blocks), &
+                  KuxU (nx_block,ny_block,max_blocks), &
+                  KuyU (nx_block,ny_block,max_blocks), &
+                  KuxE (nx_block,ny_block,max_blocks), &
+                  KuyE (nx_block,ny_block,max_blocks), &
+                  KuxN (nx_block,ny_block,max_blocks), &
+                  KuyN (nx_block,ny_block,max_blocks), &
+                  stat=ierr)
+         if (ierr/=0) call abort_ice(subname//': Out of memory')  
       end if
 
       end subroutine alloc_dyn_shared
@@ -384,17 +382,15 @@
             stresspU  (i,j,iblk) = c0
             stressmU  (i,j,iblk) = c0
             stress12U (i,j,iblk) = c0
-            ! if (coastal_drag) then
-               KuU  (i,j,iblk) = c0
-               KuE  (i,j,iblk) = c0
-               KuN  (i,j,iblk) = c0
-               KuxU (i,j,iblk) = c0
-               KuyU (i,j,iblk) = c0
-               KuxE (i,j,iblk) = c0
-               KuyE (i,j,iblk) = c0
-               KuxN (i,j,iblk) = c0
-               KuyN (i,j,iblk) = c0            
-            !end if
+            KuU       (i,j,iblk) = c0
+            KuE       (i,j,iblk) = c0
+            KuN       (i,j,iblk) = c0
+            KuxU      (i,j,iblk) = c0
+            KuyU      (i,j,iblk) = c0
+            KuxE      (i,j,iblk) = c0
+            KuyE      (i,j,iblk) = c0
+            KuxN      (i,j,iblk) = c0
+            KuyN      (i,j,iblk) = c0            
          endif
 
          if (kdyn == 1) then
@@ -1451,30 +1447,14 @@
          use ice_kinds_mod
          use ice_fileunits  , only: nu_diag
          use ice_communicate, only: my_task, master_task
-
          implicit none
-
          integer(kind=int_kind), intent(in) :: nx_block, ny_block
-
          real(kind=dbl_kind), dimension(nx_block,ny_block), intent(in) :: &
             imass , & ! mass of n-cell/dt (kg/m^2 s)
             F2        ! coastline form factor (drag coefficient); unitless
-
          real(kind=dbl_kind), dimension(nx_block,ny_block), intent(inout) :: &
-            Ku ! coastline stress form factor; kg/m^2 * _ * m/s^2 = kg/(m*s^2) = Pascal (Pa)
-
-         ! ! subroutine diagnostics
-         ! if (my_task==master_task) then
-         !    write(nu_diag,'(a,1pe12.4)') 'CDP: Cs =', Cs
-         !    write(nu_diag,'(a,2(1pe12.4,1x))') 'CDP: F2(mask) min/max =', &
-         !       minval(F2, mask=F2>c0), maxval(F2, mask=F2>c0)
-         !    write(nu_diag,'(a,2(1pe12.4,1x))') 'CDP: imass@F2>0 min/max =', &
-         !       minval(imass , mask=F2>c0), maxval(imass , mask=F2>c0)
-         !    ! write(nu_diag,'(a,i0)') 'CDP: icell =', icell
-         ! end if
-
+            Ku        ! coastline stress form factor; kg/m^2 * _ * m/s^2 = kg/(m*s^2) = Pascal (Pa)
          Ku = imass * F2 * Cs
-
       end subroutine coastal_drag_stress_factor
 
 !=======================================================================
