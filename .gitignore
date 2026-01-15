@@ -15,7 +15,8 @@ caselist*
 logs/
 *.log
  Build artifacts
-*.o
+*.o*
+*.e*
 *.obj
 *.mod
 *.a

@@ -10,10 +10,10 @@
     npt_unit             = 'm'
     npt                  = 12
     ndtd                 = 1
-    runtype              = 'continue'
+    runtype              = 'initial'
     ice_ic               = 'none'
     restart_ext          = .false.
-    use_restart_time     = .true.
+    use_restart_time     = .false.
     restart_format       = 'hdf5'
     restart_rearranger   = 'default'
     restart_iotasks      = -99
@@ -87,7 +87,7 @@
     use_bathymetry    = .false.
     gridcpl_file      = 'unknown_gridcpl_file'
     grid_outfile      = .false.
-    F2_file           = '/g/data/gv90/da1339/coastal_drag/form_factors/AAD_high-res_cstln_v7p9_noGI.nc'
+    F2_file           = '/g/data/gv90/da1339/coastal_drag/form_factors/ADD_high-res_cstln_v7p9_GI.nc'
     F2x_varname       = 'F2x'
     F2y_varname       = 'F2y'
     F2_map_method     = 'max'
@@ -162,8 +162,8 @@
 &dynamics_nml
     boundary_condition   = 'free_slip'
     coastal_drag         = .true.
-    Cs                   = 1e-4
-    u0                   = 5e-5
+    Cs                   = 5e-4
+    u0                   = 5e-4
     kdyn                 = 1
     ndte                 = 120
     revised_evp          = .false.
@@ -309,7 +309,7 @@
     ice_data_type   = 'uniform'
     ice_data_conc   = 'p9'
     ice_data_dist   = 'uniform'
-    fyear_init      = 1994
+    fyear_init      = 1993
     ycycle          = 1
     atm_data_format = 'nc'
     atm_data_dir    = '/g/data/gv90/da1339/afim_input/ERA5/0p25/'
