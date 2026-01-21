@@ -78,7 +78,7 @@
     grid_type         = 'tripole'
     grid_ice          = 'C'
     grid_atm          = 'A'
-    grid_ocn          = 'C'
+    grid_ocn          = 'B'
     grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_Cgrid.nc'
     kmt_type          = 'file'
     kmt_file          = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_kmt.nc'
@@ -324,7 +324,7 @@
     atm_data_dir    = '/g/data/gv90/da1339/afim_input/ERA5/0p25/'
     bgc_data_dir    = 'unknown_bgc_data_dir'
     ocn_data_format = 'nc'
-    ocn_data_dir    = '/g/data/gv90/da1339/afim_input/ORAS/daily/sfc/Cgrd/'
+    ocn_data_dir    = '/g/data/gv90/da1339/afim_input/ORAS/daily/sfc/fin/'
     oceanmixed_file = 'ORAS_.nc'
     semi_implicit_Tsfc = .false.
     vapor_flux_correction = .false.
