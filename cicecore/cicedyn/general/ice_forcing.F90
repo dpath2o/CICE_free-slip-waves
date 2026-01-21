@@ -2276,353 +2276,6 @@ contains
    !       write(nu_diag,*) subname,'  vocn', vmin, vmax
    !    endif
    ! end subroutine AFIM_data
-   !    subroutine AFIM_data(dt)
-
-   !    use ice_blocks, only            : nx_block, ny_block
-   !    use ice_read_write, only        : ice_read_nc, ice_open_nc, ice_close_nc
-   !    use ice_global_reductions, only : global_minval, global_maxval
-   !    use ice_domain, only            : distrb_info, nblocks
-   !    use ice_flux, only              : sss, sst, uocn, vocn, Tf
-   !    use ice_grid, only              : hm, tmask, umask
-   !    use ice_calendar, only          : days_per_year, months_per_year, mmonth, myear, yday, mday, msec
-   !    use ice_restart_shared, only    : restart
-   !    use ice_state, only             : aice
-   !    use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
-   !    implicit none
-
-   !    !----------------------------
-   !    ! Inputs
-   !    !----------------------------
-   !    real(kind=dbl_kind), intent(in) :: dt
-
-   !    !----------------------------
-   !    ! Parameters / thresholds
-   !    !----------------------------
-   !    real(kind=dbl_kind), parameter :: dT_sc_max       = 0.20_dbl_kind   ! allow modest supercooling
-   !    real(kind=dbl_kind), parameter :: sst_hi_thresh   = 54.0_dbl_kind   ! degC (guard for bad units)
-   !    real(kind=dbl_kind), parameter :: sst_lo_thresh   = -10.0_dbl_kind  ! degC (guard)
-   !    real(kind=dbl_kind), parameter :: sss_hi_thresh   = 47.0_dbl_kind   ! psu
-   !    real(kind=dbl_kind), parameter :: sss_lo_thresh   =  5.0_dbl_kind   ! psu (treat <= as missing/fill)
-   !    real(kind=dbl_kind), parameter :: ispd_thresh     =  2.5_dbl_kind   ! m/s (guard)
-   !    real(kind=dbl_kind), parameter :: sss_default     = 34.0_dbl_kind   ! psu fallback
-   !    real(kind=dbl_kind), parameter :: Tf_default      = -1.8_dbl_kind   ! degC fallback
-
-   !    character(len=*), parameter :: subname = '(AFIM_data)'
-
-   !    !----------------------------
-   !    ! Locals
-   !    !----------------------------
-   !    integer(kind=int_kind) :: fid, i, j, iblk
-   !    integer(kind=int_kind) :: rec0, rec1, maxrec, dataloc, fyr, modadj
-   !    logical                :: need_read_slot1, need_read_slot2, first_half
-
-   !    real(kind=dbl_kind) :: secday
-   !    real(kind=dbl_kind) :: sst_tgt, sss_tgt, u_tgt, v_tgt
-   !    real(kind=dbl_kind) :: Tf_loc, sst_sc_floor
-   !    real(kind=dbl_kind) :: a, w, wraw, sst_tgt_eff
-   !    real(kind=dbl_kind) :: tauT, tauS, facT, facS, TT_loc, TS_loc, a0_loc, pw_loc
-   !    real(kind=dbl_kind) :: vmin, vmax
-
-   !    integer(kind=int_kind) :: nstep_day
-   !    logical                :: do_dbg, do_dbg_daily
-
-   !    ! Diagnostics counters (OpenMP reductions)
-   !    integer(kind=int_kind) :: n_ocn, n_bad_sst, n_bad_sss, n_low_sss, n_bad_uv, n_nonfinite_state
-
-   !    ! --- cached state (persists across calls) ---
-   !    integer(kind=int_kind), save :: last_fyr = -999999
-   !    integer(kind=int_kind), save :: last_rec_slot(2) = (/ -999999, -999999 /)  ! slot1, slot2
-
-   !    !----------------------------
-   !    ! Init counters
-   !    !----------------------------
-   !    n_ocn            = 0
-   !    n_bad_sst        = 0
-   !    n_bad_sss        = 0
-   !    n_low_sss        = 0
-   !    n_bad_uv         = 0
-   !    n_nonfinite_state= 0
-
-   !    ! seconds/day from Icepack
-   !    call icepack_query_parameters(secday_out=secday)
-   !    call icepack_warnings_flush(nu_diag)
-   !    if (icepack_warnings_aborted()) call abort_ice(error_message=subname, file=__FILE__, line=__LINE__)
-
-   !    ! debug cadence: first ~10 days, plus whenever debug flags are on
-   !    nstep_day    = max(1_int_kind, int(secday/dt + 0.5_dbl_kind))
-   !    do_dbg       = (debug_forcing .or. local_debug)
-   !    do_dbg_daily = (do_dbg .or. (istep <= 10*nstep_day)) .and. (mod(istep, nstep_day) == 0)
-
-   !    !---------------------------------------------------------------------
-   !    ! 1) Determine forcing year (supports ycycle)
-   !    !---------------------------------------------------------------------
-   !    modadj = abs((min(0,myear-fyear_init)/ycycle + 1) * ycycle)
-   !    fyr    = fyear_init + mod(myear - fyear_init + modadj, ycycle)
-
-   !    if (fyr /= last_fyr) then
-   !       call AFIM_files(fyr)                 ! updates F_AFIM -> ORAS_YYYY.nc
-   !       last_fyr = fyr
-   !       last_rec_slot(1) = -999999
-   !       last_rec_slot(2) = -999999
-   !       if (my_task == master_task) then
-   !          write(nu_diag,*) subname,' switching forcing year -> ', fyr
-   !          write(nu_diag,*) subname,' F_AFIM = ', trim(F_AFIM)
-   !          call icepack_warnings_flush(nu_diag)
-   !       endif
-   !    endif
-
-   !    !---------------------------------------------------------------------
-   !    ! 2) Determine which two records we need + interpolation coefficients
-   !    !---------------------------------------------------------------------
-   !    dataloc = 2  ! data at end of interval
-
-   !    if (trim(ocn_data_freq) == 'monthly') then
-   !       maxrec = months_per_year
-   !       first_half = (int(mday) < 15) .or. (int(mday) == 15 .and. int(msec) == 0)
-
-   !       if (first_half) then
-   !          rec1 = max(1, min(maxrec, mmonth))
-   !          rec0 = rec1 - 1
-   !          if (rec0 < 1) rec0 = maxrec
-   !          call interp_coeff_monthly(2)
-   !       else
-   !          rec0 = max(1, min(maxrec, mmonth))
-   !          rec1 = rec0 + 1
-   !          if (rec1 > maxrec) rec1 = 1
-   !          call interp_coeff_monthly(1)
-   !       endif
-
-   !    elseif (trim(ocn_data_freq) == 'weekly') then
-   !       maxrec = days_per_year / 7
-   !       rec1   = int( real(yday-1,kind=dbl_kind) / 7._dbl_kind ) + 1
-   !       rec1   = max(1, min(maxrec, rec1))
-   !       rec0   = max(1, rec1-1)
-   !       call interp_coeff(rec1, 2, secday*7._dbl_kind, dataloc)
-
-   !    else
-   !       maxrec = days_per_year
-   !       rec1   = int(yday)
-   !       rec1   = max(1, min(maxrec, rec1))
-   !       rec0   = max(1, rec1-1)
-   !       call interp_coeff(rec1, 2, secday, dataloc)
-   !    endif
-
-   !    !---------------------------------------------------------------------
-   !    ! 3) Read only when needed (record changed)
-   !    !    slot1 holds rec0, slot2 holds rec1.
-   !    !---------------------------------------------------------------------
-   !    need_read_slot1 = (rec0 /= last_rec_slot(1))
-   !    need_read_slot2 = (rec1 /= last_rec_slot(2))
-
-   !    if (need_read_slot1 .or. need_read_slot2) then
-
-   !       if (my_task == master_task) then
-   !          write(nu_diag,*) subname,' reading records rec0/rec1 = ', rec0, rec1
-   !          write(nu_diag,*) subname,' c1intp/c2intp = ', c1intp, c2intp
-   !          write(nu_diag,*) subname,' file = ', trim(F_AFIM)
-   !          call icepack_warnings_flush(nu_diag)
-   !       endif
-
-   !       call ice_open_nc(F_AFIM, fid)
-
-   !       ! --- slot 1 (rec0) ---
-   !       if (need_read_slot1) then
-   !          call ice_read_nc(fid, rec0, 'sst', sst_data(:,:,1,:),  debug_forcing, field_loc=field_loc_center,  field_type=field_type_scalar)
-   !          call ice_read_nc(fid, rec0, 'sss', sss_data(:,:,1,:),  debug_forcing, field_loc=field_loc_center,  field_type=field_type_scalar)
-
-   !          ! IMPORTANT: read currents as vectors at NEcorner (matches “working” version)
-   !          call ice_read_nc(fid, rec0, 'u',   uocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
-   !          call ice_read_nc(fid, rec0, 'v',   vocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
-
-   !          last_rec_slot(1) = rec0
-   !       endif
-
-   !       ! --- slot 2 (rec1) ---
-   !       if (need_read_slot2) then
-   !          if (rec1 == rec0) then
-   !             sst_data (:,:,2,:) = sst_data (:,:,1,:)
-   !             sss_data (:,:,2,:) = sss_data (:,:,1,:)
-   !             uocn_data(:,:,2,:) = uocn_data(:,:,1,:)
-   !             vocn_data(:,:,2,:) = vocn_data(:,:,1,:)
-   !          else
-   !             call ice_read_nc(fid, rec1, 'sst', sst_data(:,:,2,:),  debug_forcing, field_loc=field_loc_center,  field_type=field_type_scalar)
-   !             call ice_read_nc(fid, rec1, 'sss', sss_data(:,:,2,:),  debug_forcing, field_loc=field_loc_center,  field_type=field_type_scalar)
-   !             call ice_read_nc(fid, rec1, 'u',   uocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
-   !             call ice_read_nc(fid, rec1, 'v',   vocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
-   !          endif
-   !          last_rec_slot(2) = rec1
-   !       endif
-
-   !       call ice_close_nc(fid)
-
-   !       ! Raw record stats: only print when we actually read new records
-   !       if ((do_dbg) .and. (my_task == master_task)) then
-   !          write(nu_diag,*) subname,' raw record stats (slot1/slot2; masked by tmask/umask):'
-   !          vmin = global_minval(sst_data(:,:,1,:), distrb_info, tmask); vmax = global_maxval(sst_data(:,:,1,:), distrb_info, tmask)
-   !          write(nu_diag,*) subname,'  sst_data slot1 min/max ', vmin, vmax
-   !          vmin = global_minval(sst_data(:,:,2,:), distrb_info, tmask); vmax = global_maxval(sst_data(:,:,2,:), distrb_info, tmask)
-   !          write(nu_diag,*) subname,'  sst_data slot2 min/max ', vmin, vmax
-   !          vmin = global_minval(sss_data(:,:,1,:), distrb_info, tmask); vmax = global_maxval(sss_data(:,:,1,:), distrb_info, tmask)
-   !          write(nu_diag,*) subname,'  sss_data slot1 min/max ', vmin, vmax
-   !          vmin = global_minval(sss_data(:,:,2,:), distrb_info, tmask); vmax = global_maxval(sss_data(:,:,2,:), distrb_info, tmask)
-   !          write(nu_diag,*) subname,'  sss_data slot2 min/max ', vmin, vmax
-   !          call icepack_warnings_flush(nu_diag)
-   !       endif
-
-   !    endif
-
-   !    !---------------------------------------------------------------------
-   !    ! 4) Apply forcing each timestep
-   !    !---------------------------------------------------------------------
-   !    TT_loc = max(T_T, 1.0e-6_dbl_kind)      ! days, never <= 0
-   !    TS_loc = max(T_S, 1.0e-6_dbl_kind)
-   !    a0_loc = max(a_0, 1.0e-12_dbl_kind)     ! avoid divide-by-zero
-   !    pw_loc = max(p_w, 1.0_dbl_kind)
-
-   !    tauT = max(dt, TT_loc * secday)
-   !    tauS = max(dt, TS_loc * secday)
-   !    facT = min(c1, dt / tauT)
-   !    facS = min(c1, dt / tauS)
-
-   !    if (my_task == master_task) then
-   !       write(nu_diag,*) subname,' T_T=',T_T,' TT_loc=',TT_loc,' tauT(s)=',tauT,' facT=',facT
-   !       write(nu_diag,*) subname,' T_S=',T_S,' TS_loc=',TS_loc,' tauS(s)=',tauS,' facS=',facS
-   !       write(nu_diag,*) subname,' a_0=',a0_loc,' p_w=',pw_loc,' ocn_data_freq=',trim(ocn_data_freq)
-   !       call icepack_warnings_flush(nu_diag)
-   !    endif
-
-   ! !$OMP PARALLEL DO DEFAULT(SHARED) &
-   ! !$OMP PRIVATE(iblk,i,j, sst_tgt,sss_tgt,u_tgt,v_tgt, Tf_loc, sst_sc_floor, a,w,wraw,sst_tgt_eff) &
-   ! !$OMP REDUCTION(+:n_ocn,n_bad_sst,n_bad_sss,n_low_sss,n_bad_uv,n_nonfinite_state)
-   !    do iblk = 1, nblocks
-   !       do j = 1, ny_block
-   !          do i = 1, nx_block
-
-   !             if (hm(i,j,iblk) == c0) then
-   !                ! land
-   !                sst (i,j,iblk) = c0
-   !                sss (i,j,iblk) = c0
-   !                uocn(i,j,iblk) = c0
-   !                vocn(i,j,iblk) = c0
-   !             else
-   !                n_ocn = n_ocn + 1
-
-   !                ! Linear time interpolation between cached records
-   !                sst_tgt = c1intp*sst_data (i,j,1,iblk) + c2intp*sst_data (i,j,2,iblk)
-   !                sss_tgt = c1intp*sss_data (i,j,1,iblk) + c2intp*sss_data (i,j,2,iblk)
-   !                u_tgt   = c1intp*uocn_data(i,j,1,iblk) + c2intp*uocn_data(i,j,2,iblk)
-   !                v_tgt   = c1intp*vocn_data(i,j,1,iblk) + c2intp*vocn_data(i,j,2,iblk)
-
-   !                ! Local freezing point (defensive)
-   !                Tf_loc = Tf(i,j,iblk)
-   !                if (.not. ieee_is_finite(Tf_loc)) Tf_loc = Tf_default
-
-   !                !---------------------------------------------------------
-   !                ! Missing/fill handling
-   !                !   - Treat non-finite SST/SSS as missing
-   !                !   - Treat very low SSS (<=5 psu) as missing/fill (common “0” artefact)
-   !                !   - Cap absurd SST/SSS, and cap extreme currents
-   !                !---------------------------------------------------------
-   !                if ((.not. ieee_is_finite(sss_tgt)) .or. (sss_tgt > sss_hi_thresh) .or. (sss_tgt <= sss_lo_thresh)) then
-   !                   n_bad_sss = n_bad_sss + 1
-   !                   if (sss_tgt <= sss_lo_thresh) n_low_sss = n_low_sss + 1
-   !                   sss_tgt = sss_default
-   !                endif
-
-   !                if ((.not. ieee_is_finite(sst_tgt)) .or. (sst_tgt < sst_lo_thresh) .or. (sst_tgt > sst_hi_thresh)) then
-   !                   n_bad_sst = n_bad_sst + 1
-   !                   sst_tgt   = Tf_loc
-   !                endif
-
-   !                ! If salinity looked like fill, SST is often also not meaningful → pull SST toward freezing
-   !                if (sss_tgt <= sss_lo_thresh + 1.0e-12_dbl_kind) then
-   !                   sst_tgt = Tf_loc
-   !                endif
-
-   !                if ((.not. ieee_is_finite(u_tgt)) .or. (abs(u_tgt) > ispd_thresh)) then
-   !                   n_bad_uv = n_bad_uv + 1
-   !                   u_tgt = c0
-   !                endif
-   !                if ((.not. ieee_is_finite(v_tgt)) .or. (abs(v_tgt) > ispd_thresh)) then
-   !                   n_bad_uv = n_bad_uv + 1
-   !                   v_tgt = c0
-   !                endif
-
-   !                ! Ensure prognostic state is finite before nudging
-   !                if (.not. ieee_is_finite(sst(i,j,iblk))) then
-   !                   sst(i,j,iblk) = sst_tgt
-   !                   n_nonfinite_state = n_nonfinite_state + 1
-   !                endif
-   !                if (.not. ieee_is_finite(sss(i,j,iblk))) then
-   !                   sss(i,j,iblk) = sss_tgt
-   !                   n_nonfinite_state = n_nonfinite_state + 1
-   !                endif
-
-   !                !---------------------------------------------------------
-   !                ! Weight w(aice): 1 in open water; 0 in consolidated ice
-   !                !---------------------------------------------------------
-   !                a = aice(i,j,iblk)
-   !                if (.not. ieee_is_finite(a)) a = c0
-
-   !                wraw = (a0_loc - a) / a0_loc
-   !                w    = min(c1, max(c0, wraw))
-   !                if (pw_loc > c1) w = w**pw_loc
-
-   !                !---------------------------------------------------------
-   !                ! SST target under ice: blend toward freezing point
-   !                !---------------------------------------------------------
-   !                sst_tgt_eff   = w*sst_tgt + (c1 - w)*Tf_loc
-   !                sst(i,j,iblk) = sst(i,j,iblk) + facT*(sst_tgt_eff - sst(i,j,iblk))
-
-   !                ! modest supercooling limiter (do NOT clamp to Tf)
-   !                sst_sc_floor  = Tf_loc - dT_sc_max
-   !                sst(i,j,iblk) = max(sst(i,j,iblk), sst_sc_floor)
-
-   !                !---------------------------------------------------------
-   !                ! SSS: restore mainly in open water (tapered by w)
-   !                !---------------------------------------------------------
-   !                sss(i,j,iblk) = sss(i,j,iblk) + facS*w*(sss_tgt - sss(i,j,iblk))
-
-   !                !---------------------------------------------------------
-   !                ! Currents: accept targets (after guardrails)
-   !                !---------------------------------------------------------
-   !                uocn(i,j,iblk) = u_tgt
-   !                vocn(i,j,iblk) = v_tgt
-
-   !             endif
-   !          enddo
-   !       enddo
-   !    enddo
-   ! !$OMP END PARALLEL DO
-
-   !    ! Update freezing temperature after salinity update
-   !    call ocn_freezing_temperature
-
-   !    !---------------------------------------------------------------------
-   !    ! Diagnostics / prints
-   !    !---------------------------------------------------------------------
-   !    if ((do_dbg_daily) .and. (my_task == master_task)) then
-   !       write(nu_diag,*) subname,' istep=',istep,' yday=',yday,' msec=',msec
-   !       write(nu_diag,*) subname,' counts (MPI-local): ocean=',n_ocn, &
-   !                      ' bad_sst=',n_bad_sst,' bad_sss=',n_bad_sss,' low_sss=',n_low_sss, &
-   !                      ' bad_uv=',n_bad_uv,' nonfinite_state_fixups=',n_nonfinite_state
-
-   !       vmin = global_minval(aice, distrb_info, tmask); vmax = global_maxval(aice, distrb_info, tmask)
-   !       write(nu_diag,*) subname,' aice min/max ', vmin, vmax
-
-   !       vmin = global_minval(sst,  distrb_info, tmask); vmax = global_maxval(sst,  distrb_info, tmask)
-   !       write(nu_diag,*) subname,' sst  min/max ', vmin, vmax
-
-   !       vmin = global_minval(sss,  distrb_info, tmask); vmax = global_maxval(sss,  distrb_info, tmask)
-   !       write(nu_diag,*) subname,' sss  min/max ', vmin, vmax
-
-   !       vmin = global_minval(Tf,   distrb_info, tmask); vmax = global_maxval(Tf,   distrb_info, tmask)
-   !       write(nu_diag,*) subname,' Tf   min/max ', vmin, vmax
-
-   !       call icepack_warnings_flush(nu_diag)
-   !    endif
-
-   ! end subroutine AFIM_data
    subroutine AFIM_data(dt)
 
       use ice_blocks, only            : nx_block, ny_block
@@ -2664,7 +2317,7 @@ contains
       real(kind=dbl_kind) :: vmin, vmax
 
       integer(kind=int_kind) :: nstep_day, nstep_2hr
-      logical                :: do_early, do_dbg
+      logical                :: do_dbg
 
       integer(kind=int_kind) :: n_ocn, n_bad_sst, n_bad_sss, n_bad_uv, n_nonfinite_state
 
@@ -2683,11 +2336,9 @@ contains
 
       nstep_day = max(1_int_kind, int(secday/dt + 0.5_dbl_kind))
       nstep_2hr = max(1_int_kind, int((2.0_dbl_kind*3600.0_dbl_kind)/dt + 0.5_dbl_kind))
-
-      do_early = (istep <= 10)
       do_dbg   = (debug_forcing .or. local_debug)
 
-      if (my_task == master_task .and. do_early) then
+      if (my_task == master_task) then
          write(nu_diag,*) subname,' ENTER istep=',istep,' yday=',yday,' msec=',msec
          call icepack_warnings_flush(nu_diag)
       endif
@@ -2809,7 +2460,7 @@ contains
       facT = min(c1, dt / tauT)
       facS = min(c1, dt / tauS)
 
-      if (my_task == master_task .and. istep == 1) then
+      if (my_task == master_task) then
          write(nu_diag,*) subname,' T_T=',T_T,' TT_loc=',TT_loc,' tauT(s)=',tauT,' facT=',facT
          write(nu_diag,*) subname,' T_S=',T_S,' TS_loc=',TS_loc,' tauS(s)=',tauS,' facS=',facS
          write(nu_diag,*) subname,' a_0=',a0_loc,' p_w=',pw_loc,' ocn_data_freq=',trim(ocn_data_freq)
@@ -2900,7 +2551,6 @@ contains
 
       ! “heartbeat” prints: first 10 steps always; then every 2 hours for first 2 days; then daily if debug
       if (my_task == master_task) then
-         if (do_early .or. (istep <= 2*nstep_day .and. mod(istep,nstep_2hr)==0) .or. ((do_dbg) .and. mod(istep,nstep_day)==0)) then
             write(nu_diag,*) subname,' istep=',istep,' yday=',yday,' msec=',msec, &
                            ' ocean=',n_ocn,' bad_sst=',n_bad_sst,' bad_sss=',n_bad_sss, &
                            ' bad_uv=',n_bad_uv,' state_fixups=',n_nonfinite_state
@@ -2908,23 +2558,20 @@ contains
             write(nu_diag,*) subname,' aice min/max ', vmin, vmax
             vmin = global_minval(sst,  distrb_info, tmask); vmax = global_maxval(sst,  distrb_info, tmask)
             write(nu_diag,*) subname,' sst  min/max ', vmin, vmax
-            vmin = global_minval(sss,  distrb_info, tmask); vmax = global_maxval(sss,  distrb_info, tmask)
-            write(nu_diag,*) subname,' sss  min/max ', vmin, vmax
+            ! vmin = global_minval(sss,  distrb_info, tmask); vmax = global_maxval(sss,  distrb_info, tmask)
+            ! write(nu_diag,*) subname,' sss  min/max ', vmin, vmax
             vmin = global_minval(Tf,   distrb_info, tmask); vmax = global_maxval(Tf,   distrb_info, tmask)
             write(nu_diag,*) subname,' Tf   min/max ', vmin, vmax
             call icepack_warnings_flush(nu_diag)
-         endif
       endif
 
       if (my_task == master_task) then
-         if (mod(istep, 48) == 0) then  ! every model day for dt=1800s
             write(nu_diag,*) subname,' HEARTBEAT istep=',istep,' yday=',yday,' msec=',msec, &
                            ' rec0/rec1=',rec0,rec1,' c1intp/c2intp=',c1intp,c2intp
             call icepack_warnings_flush(nu_diag)
-         endif
       endif
 
-      if (my_task == master_task .and. do_early) then
+      if (my_task == master_task) then
          write(nu_diag,*) subname,' EXIT istep=',istep
          call icepack_warnings_flush(nu_diag)
       endif
