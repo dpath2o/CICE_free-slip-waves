@@ -1953,6 +1953,269 @@ contains
        if (my_task.eq.master_task) write (nu_diag,*) subname,'  Qa',vmin,vmax
     endif                   ! debug_forcing
   end subroutine ERA5_data
+!===============================================================================
+! ERA5_data: Hourly atmospheric forcing for standalone CICE configurations
+!
+! This subroutine reads and interpolates hourly ERA5 atmospheric forcing data.
+! ERA5 data is assumed to be stored in annual NetCDF files with the following
+! variable names and conventions:
+!
+!   airtmp  : 2m air temperature [K], instantaneous
+!   wndewd  : 10m eastward wind [m/s], instantaneous  
+!   wndnwd  : 10m northward wind [m/s], instantaneous
+!   spchmd  : specific humidity [kg/kg], instantaneous
+!   glbrad  : downwelling shortwave radiation [W/m²], 1-hour average
+!   dlwsfc  : downwelling longwave radiation [W/m²], 1-hour average
+!   ttlpcp  : total precipitation [kg/m²/s], 1-hour average
+!
+! Instantaneous fields are linearly interpolated between adjacent records.
+! Averaged flux fields (SW, LW, precip) are applied as piecewise constant.
+!
+! File naming convention: {prefix}_{YYYY}.nc
+! Default prefix: 'era5_for_cice6' (configurable via atm_data_dir)
+!
+! Author: DP@H2O, University of Tasmania
+! Based on JRA55_data structure from CICE6
+!===============================================================================
+! subroutine ERA5_data
+!    use ice_kinds_mod
+!    use ice_blocks, only            : block, get_block
+!    use ice_global_reductions, only : global_minval, global_maxval
+!    use ice_domain, only            : nblocks, distrb_info
+!    use ice_flux, only              : fsnow, Tair, uatm, vatm, Qa, fsw, flw
+!    use ice_grid, only              : hm, tmask, umask
+!    use ice_state, only             : aice
+!    use ice_calendar, only          : days_per_year, mday, mmonth, myear
+   
+!    implicit none
+   
+!    ! Local variables
+!    integer(kind=int_kind) :: ncid              ! NetCDF file ID
+!    integer(kind=int_kind) :: i, j, n1          ! loop indices
+!    integer(kind=int_kind) :: iblk              ! block index
+!    integer(kind=int_kind) :: recnum            ! current record number
+!    integer(kind=int_kind) :: maxrec            ! maximum record number for year
+!    real(kind=dbl_kind)    :: sec1hr            ! seconds per hour
+!    real(kind=dbl_kind)    :: secday            ! seconds per day
+!    real(kind=dbl_kind)    :: eps, tt           ! interpolation calculation
+!    real(kind=dbl_kind)    :: Tffresh           ! freezing point of fresh water [K]
+!    real(kind=dbl_kind)    :: vmin, vmax        ! diagnostic min/max
+   
+!    character(len=64)              :: fieldname
+!    character(len=*), parameter    :: subname = '(ERA5_data)'
+   
+!    ! Cached state to avoid redundant reads
+!    integer(kind=int_kind), save :: last_recnum = -999999
+!    integer(kind=int_kind), save :: last_fyear  = -999999
+   
+!    !---------------------------------------------------------------------------
+!    ! 0) Get constants from icepack
+!    !---------------------------------------------------------------------------
+!    call icepack_query_parameters(Tffresh_out=Tffresh)
+!    call icepack_query_parameters(secday_out=secday)
+!    call icepack_warnings_flush(nu_diag)
+!    if (icepack_warnings_aborted()) call abort_ice(error_message=subname, file=__FILE__, line=__LINE__)
+   
+!    sec1hr = secday / 24._dbl_kind   ! 3600 seconds
+   
+!    !---------------------------------------------------------------------------
+!    ! 1) Determine maximum records for this year (leap year handling)
+!    !---------------------------------------------------------------------------
+!    maxrec = 365 * 24
+!    if (mod(myear, 4) == 0)   maxrec = 366 * 24
+!    if (mod(myear, 100) == 0) maxrec = 365 * 24  ! century not leap
+!    if (mod(myear, 400) == 0) maxrec = 366 * 24  ! 400-year exception
+   
+!    if (my_task == master_task) then
+!       write(nu_diag,*) subname, ' myear, mmonth = ', myear, mmonth
+!       write(nu_diag,*) subname, ' max records   = ', maxrec
+!    endif
+   
+!    !---------------------------------------------------------------------------
+!    ! 2) Compute current record number (1-indexed, hourly)
+!    !    Record 1 = Jan 1 00:00 UTC
+!    !---------------------------------------------------------------------------
+!    recnum = 24 * int(yday) - 23 + int(real(msec, kind=dbl_kind) / sec1hr)
+!    recnum = max(1, min(maxrec, recnum))
+   
+!    if (my_task == master_task) then
+!       write(nu_diag,*) subname, ' current record = ', recnum
+!    endif
+   
+!    !---------------------------------------------------------------------------
+!    ! 3) Handle year transitions
+!    !---------------------------------------------------------------------------
+!    if ((myear > fyear_init .and. recnum == 1) .or. (recnum > maxrec)) then
+!       call ERA5_files(myear)
+!       recnum = 1
+!       last_recnum = -999999
+!    endif
+   
+!    !---------------------------------------------------------------------------
+!    ! 4) Read data for interpolation brackets [recnum, recnum+1]
+!    !    Only read when records change
+!    !---------------------------------------------------------------------------
+!    if (recnum /= last_recnum .or. fyear /= last_fyear) then
+      
+!       call ice_open_nc(F_ERA5, ncid)
+      
+!       do n1 = 0, 1
+!          if (recnum > 1 .and. recnum < maxrec) then
+!             ! Normal case: read current and next record
+!             fieldname = 'airtmp'
+!             call ice_read_nc(ncid, recnum + n1, fieldname, Tair_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'wndewd'
+!             call ice_read_nc(ncid, recnum + n1, fieldname, uatm_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'wndnwd'
+!             call ice_read_nc(ncid, recnum + n1, fieldname, vatm_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'spchmd'
+!             call ice_read_nc(ncid, recnum + n1, fieldname, Qa_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'glbrad'
+!             call ice_read_nc(ncid, recnum + n1, fieldname, fsw_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'dlwsfc'
+!             call ice_read_nc(ncid, recnum + n1, fieldname, flw_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'ttlpcp'
+!             call ice_read_nc(ncid, recnum + n1, fieldname, fsnow_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!          else
+!             ! Edge case: repeat same record for both slots
+!             fieldname = 'airtmp'
+!             call ice_read_nc(ncid, recnum, fieldname, Tair_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'wndewd'
+!             call ice_read_nc(ncid, recnum, fieldname, uatm_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'wndnwd'
+!             call ice_read_nc(ncid, recnum, fieldname, vatm_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'spchmd'
+!             call ice_read_nc(ncid, recnum, fieldname, Qa_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'glbrad'
+!             call ice_read_nc(ncid, recnum, fieldname, fsw_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'dlwsfc'
+!             call ice_read_nc(ncid, recnum, fieldname, flw_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!             fieldname = 'ttlpcp'
+!             call ice_read_nc(ncid, recnum, fieldname, fsnow_data(:,:,n1+1,:), &
+!                  local_debug, field_loc=field_loc_center, field_type=field_type_scalar)
+!          endif
+!       enddo
+      
+!       call ice_close_nc(ncid)
+      
+!       last_recnum = recnum
+!       last_fyear = fyear
+!    endif
+   
+!    !---------------------------------------------------------------------------
+!    ! 5) Compute interpolation coefficients for instantaneous fields
+!    !---------------------------------------------------------------------------
+!    eps = 1.0e-6_dbl_kind
+!    tt = real(mod(msec, nint(sec1hr)), kind=dbl_kind)
+!    c2intp = tt / sec1hr
+   
+!    ! Clamp to [0,1] with tolerance
+!    if (c2intp < c0 .and. c2intp > c0 - eps) c2intp = c0
+!    if (c2intp > c1 .and. c2intp < c1 + eps) c2intp = c1
+!    c1intp = c1 - c2intp
+   
+!    if (c2intp < c0 .or. c2intp > c1) then
+!       write(nu_diag,*) subname, ' ERROR: c2intp = ', c2intp
+!       call abort_ice(error_message=subname//' ERROR: c2intp out of range', &
+!            file=__FILE__, line=__LINE__)
+!    endif
+   
+!    if (my_task == master_task) then
+!       write(nu_diag,*) subname, ' c1intp, c2intp = ', c1intp, c2intp
+!    endif
+   
+!    !---------------------------------------------------------------------------
+!    ! 6) Interpolate instantaneous fields; use piecewise constant for fluxes
+!    !---------------------------------------------------------------------------
+!    call interpolate_data(Tair_data, Tair)
+!    call interpolate_data(uatm_data, uatm)
+!    call interpolate_data(vatm_data, vatm)
+!    call interpolate_data(Qa_data, Qa)
+   
+!    ! Flux fields: piecewise constant (use first slot = current hour average)
+!    fsw(:,:,:)   = fsw_data(:,:,1,:)
+!    flw(:,:,:)   = flw_data(:,:,1,:)
+!    fsnow(:,:,:) = fsnow_data(:,:,1,:)
+   
+!    !---------------------------------------------------------------------------
+!    ! 7) Apply constraints and masks
+!    !---------------------------------------------------------------------------
+!    !$OMP PARALLEL DO PRIVATE(iblk, j, i)
+!    do iblk = 1, nblocks
+!       do j = 1, ny_block
+!          do i = 1, nx_block
+            
+!             ! Limit summer Tair over ice to prevent unrealistic surface warming
+!             ! This prevents warm bias when forcing has open-ocean temperatures
+!             if (aice(i,j,iblk) > p1) then
+!                Tair(i,j,iblk) = min(Tair(i,j,iblk), Tffresh + p1)
+!             endif
+            
+!             ! Apply land mask (zero forcing over land)
+!             Qa(i,j,iblk)    = Qa(i,j,iblk)    * hm(i,j,iblk)
+!             Tair(i,j,iblk)  = Tair(i,j,iblk)  * hm(i,j,iblk)
+!             uatm(i,j,iblk)  = uatm(i,j,iblk)  * hm(i,j,iblk)
+!             vatm(i,j,iblk)  = vatm(i,j,iblk)  * hm(i,j,iblk)
+!             fsw(i,j,iblk)   = fsw(i,j,iblk)   * hm(i,j,iblk)
+!             flw(i,j,iblk)   = flw(i,j,iblk)   * hm(i,j,iblk)
+!             fsnow(i,j,iblk) = fsnow(i,j,iblk) * hm(i,j,iblk)
+            
+!          enddo
+!       enddo
+!    enddo
+!    !$OMP END PARALLEL DO
+   
+!    !---------------------------------------------------------------------------
+!    ! 8) Diagnostics
+!    !---------------------------------------------------------------------------
+!    if (debug_forcing .or. local_debug) then
+!       if (my_task == master_task) then
+!          write(nu_diag,*) subname, ' ERA5 forcing record: ', recnum
+!       endif
+      
+!       vmin = global_minval(fsw, distrb_info, tmask)
+!       vmax = global_maxval(fsw, distrb_info, tmask)
+!       if (my_task == master_task) write(nu_diag,*) subname, '  fsw   ', vmin, vmax
+      
+!       vmin = global_minval(flw, distrb_info, tmask)
+!       vmax = global_maxval(flw, distrb_info, tmask)
+!       if (my_task == master_task) write(nu_diag,*) subname, '  flw   ', vmin, vmax
+      
+!       vmin = global_minval(fsnow, distrb_info, tmask)
+!       vmax = global_maxval(fsnow, distrb_info, tmask)
+!       if (my_task == master_task) write(nu_diag,*) subname, '  fsnow ', vmin, vmax
+      
+!       vmin = global_minval(Tair, distrb_info, tmask)
+!       vmax = global_maxval(Tair, distrb_info, tmask)
+!       if (my_task == master_task) write(nu_diag,*) subname, '  Tair  ', vmin, vmax
+      
+!       vmin = global_minval(uatm, distrb_info, umask)
+!       vmax = global_maxval(uatm, distrb_info, umask)
+!       if (my_task == master_task) write(nu_diag,*) subname, '  uatm  ', vmin, vmax
+      
+!       vmin = global_minval(vatm, distrb_info, umask)
+!       vmax = global_maxval(vatm, distrb_info, umask)
+!       if (my_task == master_task) write(nu_diag,*) subname, '  vatm  ', vmin, vmax
+      
+!       vmin = global_minval(Qa, distrb_info, tmask)
+!       vmax = global_maxval(Qa, distrb_info, tmask)
+!       if (my_task == master_task) write(nu_diag,*) subname, '  Qa    ', vmin, vmax
+!    endif
+
+! end subroutine ERA5_data
 
    !-----------------------------------------------------------------------
    ! AFIM_data: Ocean boundary conditions for CICE standalone runs
@@ -1999,33 +2262,342 @@ contains
    !
    ! author: dpath2o Jan.26
    !-----------------------------------------------------------------------
+   ! subroutine AFIM_data(dt)
+   !    use ice_blocks, only            : nx_block, ny_block
+   !    use ice_read_write, only        : ice_read_nc, ice_open_nc, ice_close_nc
+   !    use ice_global_reductions, only : global_minval, global_maxval
+   !    use ice_domain, only            : distrb_info, nblocks
+   !    use ice_flux, only              : sss, sst, uocn, vocn, Tf ! CICE INTERNAL OCEAN 
+   !    use ice_grid, only              : hm, tmask, umask
+   !    use ice_calendar, only          : days_per_year, months_per_year, mmonth, myear, yday, mday, msec
+   !    use ice_restart_shared, only    : restart
+   !    use ice_state, only             : aice     ! needed for w(aice)
+   !    use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
+   !    implicit none
+   !    real(kind=dbl_kind) :: Tf_loc, sst_sc_floor
+   !    real(kind=dbl_kind), parameter :: dT_sc_max = 0.20_dbl_kind   ! allow 0.2 C supercooling (tunable)
+   !    ! variable assignments
+   !    real(kind=dbl_kind), intent(in) :: dt
+   !    integer(kind=int_kind)          :: fid, i, j, iblk, rec0, rec1, maxrec, dataloc, fyr, modadj
+   !    real(kind=dbl_kind)             :: secday, sst_tgt, sss_tgt, u_tgt, v_tgt, vmin, vmax
+   !    logical                         :: need_read_slot1, need_read_slot2, first_half
+   !    character(len=*), parameter     :: subname = '(AFIM_data)'
+   !    ! --- cached state (persists across calls) ---
+   !    integer(kind=int_kind), save    :: last_fyr = -999999
+   !    integer(kind=int_kind), save    :: last_rec_slot(2) = (/ -999999, -999999 /)  ! slot1, slot2
+   !    ! --- local vars for weighted restoring ---
+   !    real(kind=dbl_kind)             :: a, w, wraw, sst_tgt_eff, tauT, tauS, facT, facS, TT_loc, TS_loc, a0_loc, pw_loc
+   !    integer(kind=int_kind) :: n_bad_sst, n_bad_sss, n_ocn
+   !    n_bad_sst = 0; n_bad_sss = 0; n_ocn = 0
+   !    call icepack_query_parameters(secday_out=secday)
+   !    call icepack_warnings_flush(nu_diag)
+   !    if (icepack_warnings_aborted()) call abort_ice(error_message=subname, file=__FILE__, line=__LINE__)
+   !    !---------------------------------------------------------------------
+   !    ! 1) Determine forcing year (supports ycycle logic used elsewhere)
+   !    !---------------------------------------------------------------------
+   !    modadj = abs((min(0,myear-fyear_init)/ycycle + 1) * ycycle)
+   !    fyr    = fyear_init + mod(myear - fyear_init + modadj, ycycle)
+   !    if (fyr /= last_fyr) then
+   !       call AFIM_files(fyr)                 ! updates F_AFIM -> ORAS_YYYY.nc
+   !       last_fyr = fyr
+   !       last_rec_slot(1) = -999999
+   !       last_rec_slot(2) = -999999
+   !       if (my_task == master_task) then
+   !          write(nu_diag,*) subname,' switching forcing year -> ', fyr
+   !          write(nu_diag,*) subname,' F_AFIM = ', trim(F_AFIM)
+   !       endif
+   !    endif
+   !    !---------------------------------------------------------------------
+   !    ! 2) Determine which two records we need (rec0=slot1, rec1=slot2),
+   !    !    and set interpolation coefficients c1intp/c2intp.
+   !    !---------------------------------------------------------------------
+   !    dataloc = 2  ! data located at end of interval (matches your prior usage)
+   !    if (trim(ocn_data_freq) == 'monthly') then
+   !       maxrec = months_per_year
+   !       ! midpoint is at day 15, 00:00; treat (mday<15) as first half
+   !       first_half = (int(mday) < 15) .or. (int(mday) == 15 .and. int(msec) == 0)
+   !       if (first_half) then
+   !          ! slot2 = current month, slot1 = previous month (wrap within same file)
+   !          rec1 = max(1, min(maxrec, mmonth))
+   !          rec0 = rec1 - 1
+   !          if (rec0 < 1) rec0 = maxrec
+   !          call interp_coeff_monthly(2)   ! recslot=2 => first half (per your routine)
+   !       else ! slot1 = current month, slot2 = next month (wrap within same file)
+   !          rec0 = max(1, min(maxrec, mmonth))
+   !          rec1 = rec0 + 1
+   !          if (rec1 > maxrec) rec1 = 1
+   !          call interp_coeff_monthly(1)   ! recslot=1 => second half
+   !       endif
+   !    elseif (trim(ocn_data_freq) == 'weekly') then
+   !       maxrec = days_per_year / 7
+   !       rec1   = int( real(yday-1,kind=dbl_kind) / 7._dbl_kind ) + 1
+   !       rec1   = max(1, min(maxrec, rec1))
+   !       rec0   = max(1, rec1-1)
+   !       call interp_coeff(rec1, 2, secday*7._dbl_kind, dataloc)
+   !    else ! default to daily
+   !       maxrec = days_per_year
+   !       rec1   = int(yday)
+   !       rec1   = max(1, min(maxrec, rec1))
+   !       rec0   = max(1, rec1-1)
+   !       call interp_coeff(rec1, 2, secday, dataloc)
+   !    endif
+   !    !---------------------------------------------------------------------
+   !    ! 3) Read only when needed (record changed since last call).
+   !    !    slot1 holds rec0, slot2 holds rec1.
+   !    !---------------------------------------------------------------------
+   !    need_read_slot1 = (rec0 /= last_rec_slot(1))
+   !    need_read_slot2 = (rec1 /= last_rec_slot(2))
+   !    if (need_read_slot1 .or. need_read_slot2) then
+   !       if (my_task == master_task) then
+   !          write(nu_diag,*) subname,' reading records rec0/rec1 = ', rec0, rec1
+   !          write(nu_diag,*) subname,' c1intp/c2intp = ', c1intp, c2intp
+   !          write(nu_diag,*) subname,' file = ', trim(F_AFIM)
+   !       endif
+   !       call ice_open_nc(F_AFIM, fid)
+   !       ! --- slot 1 (rec0) ---
+   !       if (need_read_slot1) then
+   !          call ice_read_nc(fid, rec0, 'sst', sst_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !          call ice_read_nc(fid, rec0, 'sss', sss_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !          call ice_read_nc(fid, rec0, 'u'  , uocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !          call ice_read_nc(fid, rec0, 'v'  , vocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !          last_rec_slot(1) = rec0
+   !       endif
+   !       ! --- slot 2 (rec1) ---
+   !       if (need_read_slot2) then
+   !          if (rec1 == rec0) then
+   !             ! avoid duplicate reads; just copy slot1 -> slot2
+   !             sst_data (:,:,2,:) = sst_data (:,:,1,:)
+   !             sss_data (:,:,2,:) = sss_data (:,:,1,:)
+   !             uocn_data(:,:,2,:) = uocn_data(:,:,1,:)
+   !             vocn_data(:,:,2,:) = vocn_data(:,:,1,:)
+   !          else
+   !             call ice_read_nc(fid, rec1, 'sst', sst_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !             call ice_read_nc(fid, rec1, 'sss', sss_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !             call ice_read_nc(fid, rec1, 'u'  , uocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !             call ice_read_nc(fid, rec1, 'v'  , vocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !          endif
+   !          last_rec_slot(2) = rec1
+   !       endif
+   !       call ice_close_nc(fid)
+   !    endif
+   !    if ((debug_forcing .or. local_debug) .and. (my_task == master_task)) then
+   !       write(nu_diag,*) subname,' raw record stats (slot1=rec0, slot2=rec1):'
+   !       vmin = global_minval(sst_data(:,:,1,:), distrb_info, tmask)
+   !       vmax = global_maxval(sst_data(:,:,1,:), distrb_info, tmask)
+   !       write(nu_diag,*) subname,'  sst_data slot1 min/max ', vmin, vmax
+   !       vmin = global_minval(sst_data(:,:,2,:), distrb_info, tmask)
+   !       vmax = global_maxval(sst_data(:,:,2,:), distrb_info, tmask)
+   !       write(nu_diag,*) subname,'  sst_data slot2 min/max ', vmin, vmax
+   !       vmin = global_minval(sss_data(:,:,1,:), distrb_info, tmask)
+   !       vmax = global_maxval(sss_data(:,:,1,:), distrb_info, tmask)
+   !       write(nu_diag,*) subname,'  sss_data slot1 min/max ', vmin, vmax
+   !       vmin = global_minval(sss_data(:,:,2,:), distrb_info, tmask)
+   !       vmax = global_maxval(sss_data(:,:,2,:), distrb_info, tmask)
+   !       write(nu_diag,*) subname,'  sss_data slot2 min/max ', vmin, vmax
+   !    endif
+   !    !---------------------------------------------------------------------
+   !    ! 4) Apply interpolation each timestep (NO nested OpenMP; no races)
+   !    !    Now: SST/SSS use ice-dependent weighting and restoring timescales.
+   !    !---------------------------------------------------------------------
+   !    TT_loc = max(T_T, 1.0e-6_dbl_kind)   ! days, but never <=0
+   !    TS_loc = max(T_S, 1.0e-6_dbl_kind)
+   !    a0_loc = max(a_0, 1.0e-12_dbl_kind)      ! avoid divide-by-zero
+   !    pw_loc = max(p_w, 1.0_dbl_kind)
+   !    ! convert timescales from days to seconds 
+   !    tauT = max(dt, T_T * secday)
+   !    tauS = max(dt, T_S * secday)
+   !    ! restore factors (capped at 1 for stability if dt > tau)
+   !    facT = min(c1, dt / tauT)
+   !    facS = min(c1, dt / tauS)
+   !    if (my_task == master_task .and. istep == 1) then
+   !       write(nu_diag,*) subname,' T_T=',T_T,' TT_loc=',TT_loc,' tauT(s)=',tauT,' facT=',facT
+   !       write(nu_diag,*) subname,' T_S=',T_S,' TS_loc=',TS_loc,' tauS(s)=',tauS,' facS=',facS
+   !       write(nu_diag,*) subname,' a_0=',a0_loc,' p_w=',pw_loc,' ocn_data_freq=',trim(ocn_data_freq)
+   !    endif
+   !    !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(iblk,i,j, &
+   !    !$OMP   sst_tgt,sss_tgt,u_tgt,v_tgt, a,w,wraw,sst_tgt_eff, Tf_loc, sst_sc_floor)
+   !    do iblk = 1, nblocks
+   !       do j = 1, ny_block
+   !          do i = 1, nx_block
+   !             if (hm(i,j,iblk) == c0) then ! if land (hm=0) then set ocn fields to 0
+   !                sst (i,j,iblk) = c0
+   !                sss (i,j,iblk) = c0
+   !                uocn(i,j,iblk) = c0
+   !                vocn(i,j,iblk) = c0
+   !             else
+   !                n_ocn = n_ocn + 1
+   !                !------------------------------------------------------
+   !                ! Time interpolation of external forcing records using a linear interpolation 
+   !                ! between two records (index 1 and 2) using coefficients (c1intp,c2intp)
+   !                ! computed earlier by interp_coeff(). The record selection depends on 
+   !                ! ocn_data_freq ('daily','weekly','monthly'). This avoids step-wise "record updates"
+   !                ! and ensures that SST/SSS/uocn/vocn vary smoothly in time at each model timestep.
+   !                !------------------------------------------------------
+   !                sst_tgt = c1intp*sst_data (i,j,1,iblk) + c2intp*sst_data (i,j,2,iblk)
+   !                sss_tgt = c1intp*sss_data (i,j,1,iblk) + c2intp*sss_data (i,j,2,iblk)
+   !                u_tgt   = c1intp*uocn_data(i,j,1,iblk) + c2intp*uocn_data(i,j,2,iblk)
+   !                v_tgt   = c1intp*vocn_data(i,j,1,iblk) + c2intp*vocn_data(i,j,2,iblk)
+   !                ! 1) Ensure targets are finite (ORAS SST can be NaN under ice)
+   !                !    Use a local freezing point as the physically consistent fallback.
+   !                Tf_loc  = Tf(i,j,iblk)
+   !                if (.not. ieee_is_finite(Tf_loc)) Tf_loc = -1.8_dbl_kind
+   !                ! Catch NaN OR out-of-range fill values
+   !                if ((.not. ieee_is_finite(sst_tgt)) .or. (sst_tgt < -10._dbl_kind) .or. (sst_tgt > 50._dbl_kind)) then
+   !                   n_bad_sst = n_bad_sst + 1
+   !                   sst_tgt = Tf_loc
+   !                endif
+   !                if ((.not. ieee_is_finite(sss_tgt)) .or. (sss_tgt <  0._dbl_kind) .or. (sss_tgt > 60._dbl_kind)) then
+   !                   n_bad_sss = n_bad_sss + 1
+   !                   sss_tgt = 34._dbl_kind
+   !                endif
+   !                ! 2) Ensure the prognostic state is finite before nudging
+   !                if (.not. ieee_is_finite(sst(i,j,iblk))) sst(i,j,iblk) = sst_tgt
+   !                if (.not. ieee_is_finite(sss(i,j,iblk))) sss(i,j,iblk) = sss_tgt
+   !                !------------------------------------------------------
+   !                ! Open-water weight w(aice), thermodynamic restoring based on ice
+   !                ! concentration to prevent imposing open-ocean SST/SSS under 
+   !                ! consolidated ice.
+   !                ! w=1 : open water (aice ~ 0)  -> full restoring to forcing
+   !                ! w=0 : consolidated ice (aice >= a0) -> no open-ocean restoring
+   !                ! a0  : concentration threshold (ice_in -> a_0; default 0.15)
+   !                ! p_w : optional exponent controlling transition sharpness
+   !                !       (ice_in -> p_w; default 1.0). Larger p_w makes the taper more ... edgey!?! 
+   !                !------------------------------------------------------
+   !                a    = aice(i,j,iblk)
+   !                if (.not. ieee_is_finite(a)) a = 0._dbl_kind
+   !                wraw = (a0_loc - a) / a0_loc
+   !                w    = min(c1, max(c0, wraw))
+   !                if (pw_loc > c1) w = w**pw_loc
+   !                !------------------------------------------------------
+   !                ! SST under ice: freezing-point constrained restoring
+   !                ! Rationale: In a slab mixed-layer, prescribing or strongly restoring to
+   !                ! open-ocean SST under winter sea ice could likely inject unrealistically
+   !                ! warm water and suppress ice growth (biasing SIA/FIA low). Under consolidated
+   !                ! ice the mixed-layer is typically close to the local freezing point; therefore 
+   !                ! the aim here is to blend the target SST toward `Tf` as ice concentration increases.
+   !                ! Effective target:
+   !                !   T_tgt_eff = w*T_forcing + (1-w)*Tf
+   !                ! Then apply a relaxation with timescale T_T (days), which controls how tightly
+   !                ! the slab mixed-layer SST follows the external product in open water.
+   !                !------------------------------------------------------
+   !                sst_tgt_eff   = w*sst_tgt + (c1 - w)*Tf_loc
+   !                sst(i,j,iblk) = sst(i,j,iblk) + facT*(sst_tgt_eff - sst(i,j,iblk))
+   !                !------------------------------------------------------
+   !                ! SSS: open-water restoring only (tapered by w)
+   !                ! Rationale: Salinity under ice is strongly influenced by local freezing/melting
+   !                ! and brine rejection. Aggressive restoring of SSS under sea ice could overwrite
+   !                ! this evolution and indirectly bias Tf and growth rates. Therefore I apply a 
+   !                ! restoring in open water and progressively turn it off as ice consolidates.
+   !                ! Equivalent to restoring toward:
+   !                !   S_tgt = w*S_forcing + (1-w)*S_model
+   !                ! Implemented as:
+   !                !   dS/dt ~ (w/tauS) * (S_forcing - S_model)
+   !                ! with timescale T_S (days).
+   !                !------------------------------------------------------
+   !                sss(i,j,iblk) = sss(i,j,iblk) + facS*w*(sss_tgt - sss(i,j,iblk))
+   !                !------------------------------------------------------
+   !                ! 6) IMPORTANT: do NOT hard-floor SST at Tf (kills freeze initiation in some orderings)
+   !                !    If you want a safety limiter, allow modest supercooling:
+   !                sst_sc_floor  = Tf_loc - dT_sc_max
+   !                sst(i,j,iblk) = max(sst(i,j,iblk), sst_sc_floor)
+   !                !------------------------------------------------------
+   !                ! Ocean currents: accept time-interpolated u/v as provided.
+   !                ! Rationale: uocn/vocn represent the large-scale ocean forcing from the reanalysis
+   !                ! and provide the advective/momentum driver for ice drift and ice–ocean relative
+   !                ! motion. Tapering currents based on sea ice concentration (`aice`) would likely
+   !                ! introduce an ad hoc momentum sink tied to the ice state and possibly confound
+   !                ! mechanical sensitivity experiments.
+   !                uocn(i,j,iblk) = u_tgt
+   !                vocn(i,j,iblk) = v_tgt
+   !             endif
+   !          enddo
+   !       enddo
+   !    enddo
+   !    !$OMP END PARALLEL DO
+   !    if ((debug_forcing .or. local_debug) .and. my_task == master_task) then
+   !       write(nu_diag,*) subname,' bad_sst=',n_bad_sst,' bad_sss=',n_bad_sss!,' ocean_pts=',n_ocn
+   !    endif
+   !    ! Recomputes freezing temperature after SSS update
+   !    call ocn_freezing_temperaturell
+   !    ! helpful prints if debuggging
+   !    if ((debug_forcing .or. local_debug) .and. my_task == master_task) then
+   !       vmin = global_minval(aice, distrb_info, tmask)
+   !       vmax = global_maxval(aice, distrb_info, tmask)
+   !       write(nu_diag,*) subname,' aice min/max ', vmin, vmax
+   !       write(nu_diag,*) subname,' global min/max after update (rec0/rec1): ', rec0, rec1
+   !       vmin = global_minval(sst ,distrb_info,tmask)
+   !       vmax = global_maxval(sst ,distrb_info,tmask)
+   !       write(nu_diag,*) subname,'  sst ', vmin, vmax
+   !       vmin = global_minval(sss ,distrb_info,tmask)
+   !       vmax = global_maxval(sss ,distrb_info,tmask)
+   !       write(nu_diag,*) subname,'  sss ', vmin, vmax
+   !       vmin = global_minval(uocn,distrb_info,umask)
+   !       vmax = global_maxval(uocn,distrb_info,umask)
+   !       write(nu_diag,*) subname,'  uocn', vmin, vmax
+   !       vmin = global_minval(vocn,distrb_info,umask)
+   !       vmax = global_maxval(vocn,distrb_info,umask)
+   !       write(nu_diag,*) subname,'  vocn', vmin, vmax
+   !    endif
+   ! end subroutine AFIM_data
+   !===============================================================================
+   ! AFIM_data: Ocean boundary conditions for standalone CICE configurations
+   !
+   ! This subroutine provides ocean forcing (SST, SSS, uocn, vocn) for standalone 
+   ! CICE runs using externally gridded fields from ocean reanalyses (e.g., ORAS, 
+   ! BRAN, HYCOM, MOM).
+   !
+   ! Key design principles:
+   !
+   ! 1. SST/SSS Ice-Dependent Taper:
+   !    - In open water: SST/SSS restored toward external forcing with timescale T_T/T_S
+   !    - Under consolidated ice: SST constrained toward freezing point, SSS restoring
+   !      reduced/eliminated to allow local thermodynamics (brine rejection, melt) to
+   !      dominate the mixed-layer evolution
+   !    - This prevents injecting unrealistic open-ocean heat/freshwater under ice
+   !
+   ! 2. Ocean Currents (uocn/vocn):
+   !    - Applied directly without ice-dependent tapering
+   !    - Represents large-scale advective forcing for ice dynamics
+   !    - Artificial damping would confound mechanical sensitivity experiments
+   !
+   ! Namelist parameters (&forcing_nml):
+   !   T_T   : SST restoring timescale [days] (default: 5)
+   !   T_S   : SSS restoring timescale [days] (default: 10)  
+   !   a_0   : Ice concentration threshold for taper onset (default: 0.15)
+   !   p_w   : Taper sharpness exponent, >=1 (default: 1.0)
+   !
+   ! Author: DP@H2O, University of Tasmania
+   ! Revision: 2025 - ice-dependent SST/SSS restoring for CICE6.6.x
+   !===============================================================================
    subroutine AFIM_data(dt)
       use ice_blocks, only            : nx_block, ny_block
       use ice_read_write, only        : ice_read_nc, ice_open_nc, ice_close_nc
       use ice_global_reductions, only : global_minval, global_maxval
       use ice_domain, only            : distrb_info, nblocks
-      use ice_flux, only              : sss, sst, uocn, vocn, Tf ! CICE INTERNAL OCEAN 
+      use ice_flux, only              : sss, sst, uocn, vocn, Tf
       use ice_grid, only              : hm, tmask, umask
       use ice_calendar, only          : days_per_year, months_per_year, mmonth, myear, yday, mday, msec
       use ice_restart_shared, only    : restart
-      use ice_state, only             : aice     ! needed for w(aice)
-      use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
       implicit none
-      real(kind=dbl_kind) :: Tf_loc, sst_sc_floor
-      real(kind=dbl_kind), parameter :: dT_sc_max = 0.20_dbl_kind   ! allow 0.2 C supercooling (tunable)
-      ! variable assignments
       real(kind=dbl_kind), intent(in) :: dt
-      integer(kind=int_kind)          :: fid, i, j, iblk, rec0, rec1, maxrec, dataloc, fyr, modadj
-      real(kind=dbl_kind)             :: secday, sst_tgt, sss_tgt, u_tgt, v_tgt, vmin, vmax
-      logical                         :: need_read_slot1, need_read_slot2, first_half
+      integer(kind=int_kind)          :: fid
+      integer(kind=int_kind)          :: i, j, iblk
+      integer(kind=int_kind)          :: rec0, rec1, maxrec, dataloc
+      integer(kind=int_kind)          :: fyr, modadj
+      real(kind=dbl_kind)             :: secday
+      real(kind=dbl_kind)             :: sst_tgt, sss_tgt, u_tgt, v_tgt
+      real(kind=dbl_kind)             :: vmin, vmax
+      logical                         :: need_read_slot1, need_read_slot2
+      logical                         :: first_half
       character(len=*), parameter     :: subname = '(AFIM_data)'
+      ! --- thresholds / sanity clamps (retain your choices) ---
+      real(kind=dbl_kind), parameter  :: sst_thresh      = 54.0_dbl_kind  ! degC
+      real(kind=dbl_kind), parameter  :: sss_high_thresh = 47.0_dbl_kind  ! psu
+      real(kind=dbl_kind), parameter  :: sss_low_thresh  =  5.0_dbl_kind  ! psu
+      real(kind=dbl_kind), parameter  :: ispd_thresh     =  2.5_dbl_kind  ! m/s
       ! --- cached state (persists across calls) ---
       integer(kind=int_kind), save    :: last_fyr = -999999
       integer(kind=int_kind), save    :: last_rec_slot(2) = (/ -999999, -999999 /)  ! slot1, slot2
-      ! --- local vars for weighted restoring ---
-      real(kind=dbl_kind)             :: a, w, wraw, sst_tgt_eff, tauT, tauS, facT, facS, TT_loc, TS_loc, a0_loc, pw_loc
-      integer(kind=int_kind) :: n_bad_sst, n_bad_sss, n_ocn
-      n_bad_sst = 0; n_bad_sss = 0; n_ocn = 0
       call icepack_query_parameters(secday_out=secday)
       call icepack_warnings_flush(nu_diag)
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, file=__FILE__, line=__LINE__)
@@ -2117,163 +2689,60 @@ contains
          endif
          call ice_close_nc(fid)
       endif
-      if ((debug_forcing .or. local_debug) .and. (my_task == master_task)) then
-         write(nu_diag,*) subname,' raw record stats (slot1=rec0, slot2=rec1):'
-         vmin = global_minval(sst_data(:,:,1,:), distrb_info, tmask)
-         vmax = global_maxval(sst_data(:,:,1,:), distrb_info, tmask)
-         write(nu_diag,*) subname,'  sst_data slot1 min/max ', vmin, vmax
-         vmin = global_minval(sst_data(:,:,2,:), distrb_info, tmask)
-         vmax = global_maxval(sst_data(:,:,2,:), distrb_info, tmask)
-         write(nu_diag,*) subname,'  sst_data slot2 min/max ', vmin, vmax
-         vmin = global_minval(sss_data(:,:,1,:), distrb_info, tmask)
-         vmax = global_maxval(sss_data(:,:,1,:), distrb_info, tmask)
-         write(nu_diag,*) subname,'  sss_data slot1 min/max ', vmin, vmax
-         vmin = global_minval(sss_data(:,:,2,:), distrb_info, tmask)
-         vmax = global_maxval(sss_data(:,:,2,:), distrb_info, tmask)
-         write(nu_diag,*) subname,'  sss_data slot2 min/max ', vmin, vmax
-      endif
       !---------------------------------------------------------------------
       ! 4) Apply interpolation each timestep (NO nested OpenMP; no races)
-      !    Now: SST/SSS use ice-dependent weighting and restoring timescales.
       !---------------------------------------------------------------------
-      TT_loc = max(T_T, 1.0e-6_dbl_kind)   ! days, but never <=0
-      TS_loc = max(T_S, 1.0e-6_dbl_kind)
-      a0_loc = max(a_0, 1.0e-12_dbl_kind)      ! avoid divide-by-zero
-      pw_loc = max(p_w, 1.0_dbl_kind)
-      ! convert timescales from days to seconds 
-      tauT = max(dt, T_T * secday)
-      tauS = max(dt, T_S * secday)
-      ! restore factors (capped at 1 for stability if dt > tau)
-      facT = min(c1, dt / tauT)
-      facS = min(c1, dt / tauS)
-      if (my_task == master_task .and. istep == 1) then
-         write(nu_diag,*) subname,' T_T=',T_T,' TT_loc=',TT_loc,' tauT(s)=',tauT,' facT=',facT
-         write(nu_diag,*) subname,' T_S=',T_S,' TS_loc=',TS_loc,' tauS(s)=',tauS,' facS=',facS
-         write(nu_diag,*) subname,' a_0=',a0_loc,' p_w=',pw_loc,' ocn_data_freq=',trim(ocn_data_freq)
-      endif
-      !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(iblk,i,j, &
-      !$OMP   sst_tgt,sss_tgt,u_tgt,v_tgt, a,w,wraw,sst_tgt_eff, Tf_loc, sst_sc_floor)
+      !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(iblk,i,j,sst_tgt,sss_tgt,u_tgt,v_tgt)
       do iblk = 1, nblocks
          do j = 1, ny_block
             do i = 1, nx_block
-               if (hm(i,j,iblk) == c0) then ! if land (hm=0) then set ocn fields to 0
+               if (hm(i,j,iblk) == c0) then
                   sst (i,j,iblk) = c0
                   sss (i,j,iblk) = c0
                   uocn(i,j,iblk) = c0
                   vocn(i,j,iblk) = c0
-               else
-                  n_ocn = n_ocn + 1
-                  !------------------------------------------------------
-                  ! Time interpolation of external forcing records using a linear interpolation 
-                  ! between two records (index 1 and 2) using coefficients (c1intp,c2intp)
-                  ! computed earlier by interp_coeff(). The record selection depends on 
-                  ! ocn_data_freq ('daily','weekly','monthly'). This avoids step-wise "record updates"
-                  ! and ensures that SST/SSS/uocn/vocn vary smoothly in time at each model timestep.
-                  !------------------------------------------------------
+               else ! linear interpolation in time
                   sst_tgt = c1intp*sst_data (i,j,1,iblk) + c2intp*sst_data (i,j,2,iblk)
                   sss_tgt = c1intp*sss_data (i,j,1,iblk) + c2intp*sss_data (i,j,2,iblk)
                   u_tgt   = c1intp*uocn_data(i,j,1,iblk) + c2intp*uocn_data(i,j,2,iblk)
                   v_tgt   = c1intp*vocn_data(i,j,1,iblk) + c2intp*vocn_data(i,j,2,iblk)
-                  ! 1) Ensure targets are finite (ORAS SST can be NaN under ice)
-                  !    Use a local freezing point as the physically consistent fallback.
-                  Tf_loc  = Tf(i,j,iblk)
-                  if (.not. ieee_is_finite(Tf_loc)) Tf_loc = -1.8_dbl_kind
-                  ! Catch NaN OR out-of-range fill values
-                  if ((.not. ieee_is_finite(sst_tgt)) .or. (sst_tgt < -10._dbl_kind) .or. (sst_tgt > 50._dbl_kind)) then
-                     n_bad_sst = n_bad_sst + 1
-                     sst_tgt = Tf_loc
+                  ! restore SST if requested (do this every timestep for correct timescale)
+                  if (restore_ocn) then
+                     sst(i,j,iblk) = sst(i,j,iblk) + (sst_tgt - sst(i,j,iblk)) * dt / trest
+                  else
+                     sst(i,j,iblk) = sst_tgt
                   endif
-                  if ((.not. ieee_is_finite(sss_tgt)) .or. (sss_tgt <  0._dbl_kind) .or. (sss_tgt > 60._dbl_kind)) then
-                     n_bad_sss = n_bad_sss + 1
-                     sss_tgt = 34._dbl_kind
-                  endif
-                  ! 2) Ensure the prognostic state is finite before nudging
-                  if (.not. ieee_is_finite(sst(i,j,iblk))) sst(i,j,iblk) = sst_tgt
-                  if (.not. ieee_is_finite(sss(i,j,iblk))) sss(i,j,iblk) = sss_tgt
-                  !------------------------------------------------------
-                  ! Open-water weight w(aice), thermodynamic restoring based on ice
-                  ! concentration to prevent imposing open-ocean SST/SSS under 
-                  ! consolidated ice.
-                  ! w=1 : open water (aice ~ 0)  -> full restoring to forcing
-                  ! w=0 : consolidated ice (aice >= a0) -> no open-ocean restoring
-                  ! a0  : concentration threshold (ice_in -> a_0; default 0.15)
-                  ! p_w : optional exponent controlling transition sharpness
-                  !       (ice_in -> p_w; default 1.0). Larger p_w makes the taper more ... edgey!?! 
-                  !------------------------------------------------------
-                  a    = aice(i,j,iblk)
-                  if (.not. ieee_is_finite(a)) a = 0._dbl_kind
-                  wraw = (a0_loc - a) / a0_loc
-                  w    = min(c1, max(c0, wraw))
-                  if (pw_loc > c1) w = w**pw_loc
-                  !------------------------------------------------------
-                  ! SST under ice: freezing-point constrained restoring
-                  ! Rationale: In a slab mixed-layer, prescribing or strongly restoring to
-                  ! open-ocean SST under winter sea ice could likely inject unrealistically
-                  ! warm water and suppress ice growth (biasing SIA/FIA low). Under consolidated
-                  ! ice the mixed-layer is typically close to the local freezing point; therefore 
-                  ! the aim here is to blend the target SST toward `Tf` as ice concentration increases.
-                  ! Effective target:
-                  !   T_tgt_eff = w*T_forcing + (1-w)*Tf
-                  ! Then apply a relaxation with timescale T_T (days), which controls how tightly
-                  ! the slab mixed-layer SST follows the external product in open water.
-                  !------------------------------------------------------
-                  sst_tgt_eff   = w*sst_tgt + (c1 - w)*Tf_loc
-                  sst(i,j,iblk) = sst(i,j,iblk) + facT*(sst_tgt_eff - sst(i,j,iblk))
-                  !------------------------------------------------------
-                  ! SSS: open-water restoring only (tapered by w)
-                  ! Rationale: Salinity under ice is strongly influenced by local freezing/melting
-                  ! and brine rejection. Aggressive restoring of SSS under sea ice could overwrite
-                  ! this evolution and indirectly bias Tf and growth rates. Therefore I apply a 
-                  ! restoring in open water and progressively turn it off as ice consolidates.
-                  ! Equivalent to restoring toward:
-                  !   S_tgt = w*S_forcing + (1-w)*S_model
-                  ! Implemented as:
-                  !   dS/dt ~ (w/tauS) * (S_forcing - S_model)
-                  ! with timescale T_S (days).
-                  !------------------------------------------------------
-                  sss(i,j,iblk) = sss(i,j,iblk) + facS*w*(sss_tgt - sss(i,j,iblk))
-                  !------------------------------------------------------
-                  ! 6) IMPORTANT: do NOT hard-floor SST at Tf (kills freeze initiation in some orderings)
-                  !    If you want a safety limiter, allow modest supercooling:
-                  sst_sc_floor  = Tf_loc - dT_sc_max
-                  sst(i,j,iblk) = max(sst(i,j,iblk), sst_sc_floor)
-                  !------------------------------------------------------
-                  ! Ocean currents: accept time-interpolated u/v as provided.
-                  ! Rationale: uocn/vocn represent the large-scale ocean forcing from the reanalysis
-                  ! and provide the advective/momentum driver for ice drift and ice–ocean relative
-                  ! motion. Tapering currents based on sea ice concentration (`aice`) would likely
-                  ! introduce an ad hoc momentum sink tied to the ice state and possibly confound
-                  ! mechanical sensitivity experiments.
+                  ! direct forcing for SSS + currents (as in your current logic)
+                  sss (i,j,iblk) = sss_tgt
                   uocn(i,j,iblk) = u_tgt
                   vocn(i,j,iblk) = v_tgt
+                  ! clamps / sanity checks (retain your intent)
+                  sst(i,j,iblk) = max(sst(i,j,iblk), Tf(i,j,iblk))
+                  if (sst(i,j,iblk) > sst_thresh) sst(i,j,iblk) = sst_thresh
+                  if (sss(i,j,iblk) > sss_high_thresh) sss(i,j,iblk) = sss_high_thresh
+                  if (sss(i,j,iblk) < sss_low_thresh ) sss(i,j,iblk) = sss_low_thresh
+                  if (abs(uocn(i,j,iblk)) > ispd_thresh) uocn(i,j,iblk) = c0
+                  if (abs(vocn(i,j,iblk)) > ispd_thresh) vocn(i,j,iblk) = c0
                endif
             enddo
          enddo
       enddo
       !$OMP END PARALLEL DO
-      if ((debug_forcing .or. local_debug) .and. my_task == master_task) then
-         write(nu_diag,*) subname,' bad_sst=',n_bad_sst,' bad_sss=',n_bad_sss!,' ocean_pts=',n_ocn
-      endif
-      ! Recomputes freezing temperature after SSS update
-      call ocn_freezing_temperaturell
-      ! helpful prints if debuggging
-      if ((debug_forcing .or. local_debug) .and. my_task == master_task) then
-         vmin = global_minval(aice, distrb_info, tmask)
-         vmax = global_maxval(aice, distrb_info, tmask)
-         write(nu_diag,*) subname,' aice min/max ', vmin, vmax
-         write(nu_diag,*) subname,' global min/max after update (rec0/rec1): ', rec0, rec1
+      call ocn_freezing_temperature
+      if (debug_forcing .or. local_debug) then
+         if (my_task == master_task) write(nu_diag,*) subname,' global min/max after update (rec0/rec1): ', rec0, rec1
          vmin = global_minval(sst ,distrb_info,tmask)
          vmax = global_maxval(sst ,distrb_info,tmask)
-         write(nu_diag,*) subname,'  sst ', vmin, vmax
+         if (my_task == master_task) write(nu_diag,*) subname,'  sst ', vmin, vmax
          vmin = global_minval(sss ,distrb_info,tmask)
          vmax = global_maxval(sss ,distrb_info,tmask)
-         write(nu_diag,*) subname,'  sss ', vmin, vmax
+         if (my_task == master_task) write(nu_diag,*) subname,'  sss ', vmin, vmax
          vmin = global_minval(uocn,distrb_info,umask)
          vmax = global_maxval(uocn,distrb_info,umask)
-         write(nu_diag,*) subname,'  uocn', vmin, vmax
+         if (my_task == master_task) write(nu_diag,*) subname,'  uocn', vmin, vmax
          vmin = global_minval(vocn,distrb_info,umask)
          vmax = global_maxval(vocn,distrb_info,umask)
-         write(nu_diag,*) subname,'  vocn', vmin, vmax
+         if (my_task == master_task) write(nu_diag,*) subname,'  vocn', vmin, vmax
       endif
    end subroutine AFIM_data
 

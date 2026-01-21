@@ -7,8 +7,8 @@
     sec_init             = 0
     istep0               = 0
     dt                   = 1800.0
-    npt_unit             = 'm'
-    npt                  = 12
+    npt_unit             = 'd'
+    npt                  = 3
     ndtd                 = 1
     runtype              = 'initial'
     ice_ic               = 'none'
@@ -76,12 +76,12 @@
 &grid_nml
     grid_format       = 'nc'
     grid_type         = 'tripole'
-    grid_ice          = 'B'
+    grid_ice          = 'C'
     grid_atm          = 'A'
-    grid_ocn          = 'B'
-    grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM2-025_grid.nc'
+    grid_ocn          = 'C'
+    grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_Cgrid.nc'
     kmt_type          = 'file'
-    kmt_file          = '/g/data/gv90/da1339/grounded_icebergs/MyThin_db/kmt_mod_thinned-0p75_v1p50_iter0.nc'
+    kmt_file          = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_kmt.nc'
     bathymetry_file   = 'unknown_bathymetry_file'
     bathymetry_format = 'default'
     use_bathymetry    = .false.
@@ -324,7 +324,7 @@
     atm_data_dir    = '/g/data/gv90/da1339/afim_input/ERA5/0p25/'
     bgc_data_dir    = 'unknown_bgc_data_dir'
     ocn_data_format = 'nc'
-    ocn_data_dir    = '/g/data/gv90/da1339/afim_input/ORAS/daily/sfc/fin/'
+    ocn_data_dir    = '/g/data/gv90/da1339/afim_input/ORAS/daily/sfc/Cgrd/'
     oceanmixed_file = 'ORAS_.nc'
     semi_implicit_Tsfc = .false.
     vapor_flux_correction = .false.

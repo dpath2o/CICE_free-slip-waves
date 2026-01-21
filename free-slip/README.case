@@ -689,3 +689,8 @@ Wed Jan 21 22:36:32 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/A
 Wed Jan 21 22:41:17 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260121-224058
 Wed Jan 21 22:42:09 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260121-224151
 Wed Jan 21 22:54:11 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260121-225351
+Wed Jan 21 23:16:55 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260121-231635
+Wed Jan 21 23:29:22 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260121-232904
+Thu Jan 22 04:37:07 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260122-043641
+Thu Jan 22 04:59:17 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260122-045859
+Thu Jan 22 05:14:39 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.260122-051335
