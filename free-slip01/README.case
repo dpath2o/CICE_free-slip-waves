@@ -570,3 +570,26 @@ Tue Jan 13 02:52:00 AEDT 2026 ./cice.run: CICE run completed successfully
 Tue Jan 13 07:58:48 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260113-051044
 Tue Jan 13 07:58:48 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
 Tue Jan 13 07:58:49 AEDT 2026 ./cice.run: CICE run completed successfully
+Sun Jan 18 17:05:40 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260118-170528
+Sun Jan 18 17:31:45 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260118-173129
+Sun Jan 18 17:31:45 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Sun Jan 18 17:31:45 AEDT 2026 ./cice.run: CICE run did NOT complete
+Sun Jan 18 20:27:36 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260118-202610
+Sun Jan 18 20:28:19 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260118-202805
+Sun Jan 18 20:28:19 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Sun Jan 18 20:28:19 AEDT 2026 ./cice.run: CICE run did NOT complete
+Sun Jan 18 20:33:57 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260118-203344
+Sun Jan 18 20:33:57 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Sun Jan 18 20:33:57 AEDT 2026 ./cice.run: CICE run did NOT complete
+Sun Jan 18 20:36:37 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260118-203626
+Sun Jan 18 23:38:05 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260118-203708
+Sun Jan 18 23:38:05 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Sun Jan 18 23:38:05 AEDT 2026 ./cice.run: CICE run completed successfully
+Tue Jan 20 12:41:59 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260120-124117
+Tue Jan 20 15:22:01 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260120-124303
+Tue Jan 20 15:22:02 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Tue Jan 20 15:22:02 AEDT 2026 ./cice.run: CICE run completed successfully
+Wed Jan 21 12:45:14 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260121-124433
+Wed Jan 21 14:54:19 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260121-124622
+Wed Jan 21 14:54:19 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Wed Jan 21 14:54:19 AEDT 2026 ./cice.run: CICE run completed successfully

@@ -183,7 +183,6 @@
       call init_history_dyn     ! initialize dynamic history variables
       call calc_timesteps       ! update timestep counter if not using npt_unit="1"
       call icepack_init_radiation ! initialize icepack shortwave tables
-
       call icepack_query_tracer_flags(tr_aero_out=tr_aero, tr_zaero_out=tr_zaero)
       call icepack_query_tracer_flags(tr_iso_out=tr_iso, tr_snow_out=tr_snow)
       call icepack_warnings_flush(nu_diag)
@@ -195,9 +194,7 @@
       ! in prep_radiation.
       if (trim(runtype) == 'continue' .or. restart) &
          call init_shortwave    ! initialize radiative transfer
-
       if (write_ic) call accum_hist(dt) ! write initial conditions
-
 ! tcraig, use advance_timestep here
 !      istep  = istep  + 1    ! update time step counters
 !      istep1 = istep1 + 1

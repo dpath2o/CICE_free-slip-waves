@@ -48,7 +48,9 @@
           uvel_init, vvel_init, uvelE_init, vvelE_init, uvelN_init, vvelN_init, &
           seabed_stress_factor_LKD, seabed_stress_factor_prob, seabed_stress_method, &
           seabed_stress, Ktens, revp, &
-          coastal_drag, boundary_condition, coastal_drag_stress_factor, Cs, u0
+          lateral_drag, boundary_condition, form_func, lateral_drag_stress_factor, &
+          Cs, Cq, u_cap, u_cap_eff, C_L, u0, &
+          static_switch, quad_switch, quad_cap_switch, linear_switch
       use ice_fileunits, only: nu_diag
       use ice_exit, only: abort_ice
       use icepack_intfc, only: icepack_warnings_flush, icepack_warnings_aborted
@@ -133,7 +135,7 @@
          load_F2_form_factors
       use ice_calendar, only: dt_dyn
       use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, &
-         iceEmask, iceNmask, coastal_drag
+         iceEmask, iceNmask, lateral_drag
       use ice_dyn_evp1d, only: dyn_evp1d_init
 
 !allocate c and cd grid var. Follow structucre of eap
@@ -153,7 +155,7 @@
 
       !------------------------------------------------
       ! form factor load or test case scenario (uniform grid)
-      if (coastal_drag) then
+      if (lateral_drag) then
          call load_F2_form_factors()
       endif
 
@@ -791,19 +793,19 @@
       endif
 
       !-----------------------------------------------------------------
-      ! coastal drag function KuE/N
+      ! lateral drag function KuE/N
       !-----------------------------------------------------------------
-      if (coastal_drag) then
+      if (lateral_drag) then
          if (grid_ice == "C") then
             9000 format(a,3(1pe16.8,1x))
             ! ----------------------------------------------------------------------
             !$OMP PARALLEL DO PRIVATE(iblk) SCHEDULE(runtime)
             do iblk = 1, nblocks
-               call coastal_drag_stress_factor(nx_block          , ny_block, &
+               call lateral_drag_stress_factor(nx_block          , ny_block, &
                                                emass   (:,:,iblk),           &
                                                KuE     (:,:,iblk),           &
                                                F2E     (:,:,iblk))
-               call coastal_drag_stress_factor(nx_block          , ny_block, &
+               call lateral_drag_stress_factor(nx_block          , ny_block, &
                                                nmass   (:,:,iblk),           &
                                                KuN     (:,:,iblk),           &
                                                F2N     (:,:,iblk))
@@ -977,6 +979,50 @@
 
       elseif (grid_ice == "C") then
 
+         ! defaults each timestep
+         static_switch   = c0
+         quad_switch     = c0
+         quad_cap_switch = c0
+         linear_switch   = c0
+
+         ! Set lateral-drag functional weights once per timestep (no ndte-branching)  
+         u_cap_eff = huge(1.0d0) ! lateral drag; form factor method 'quad_cap' default: cap disabled
+         if (u_cap > 0.0d0) u_cap_eff = u_cap
+
+         if (lateral_drag) then
+            select case (trim(form_func))
+            case ('static')
+               static_switch   = c1
+            case ('quad')
+               quad_switch     = c1
+            case ('quad_cap')
+               quad_cap_switch = c1
+               if (u_cap <= 0.0d0) then
+                  call abort_ice(error_message='form_func=quad_cap requires u_cap>0', &
+                                 file=__FILE__, line=__LINE__)
+               end if
+            case ('sum')
+               static_switch   = c1
+               quad_switch     = c1
+               linear_switch   = merge(c1, c0, C_L > 0.0d0)   ! your requested behavior
+            case ('sum_quad_cap')
+               static_switch   = c1
+               quad_cap_switch = c1
+               linear_switch   = merge(c1, c0, C_L > 0.0d0)
+               if (u_cap <= 0.0d0) then
+                  call abort_ice(error_message='form_func=sum_quad_cap requires u_cap>0', &
+                                 file=__FILE__, line=__LINE__)
+               end if
+            case ('linear')
+               linear_switch   = c1
+               ! only auto-default C_L in the explicit linear mode (keeps your “opt-in” semantics)
+               if (C_L <= 0.0d0) C_L = Cs / max(u0, 1.0e-12_dbl_kind)
+            case default
+               call abort_ice(error_message='Unknown form_func='//trim(form_func), &
+                              file=__FILE__, line=__LINE__)
+            end select
+         end if
+
          do ksub = 1,ndte        ! subcycling
 
             !$OMP PARALLEL DO PRIVATE(iblk)
@@ -1127,50 +1173,6 @@
             enddo
             !$OMP END PARALLEL DO
 
-            ! --- Diagnostics at end of subcycling ---------------------------------
-            ! if (ksub == ndte) then
-            !    nE = count(F2E /= c0)
-            !    nN = count(F2N /= c0)
-            !    nKux = count(KuxE /= c0)
-            !    nKuy = count(KuyN /= c0)
-
-
-            !    write(nu_diag,9000) 'after stepu/v_C calls F2E min/max/avg =', &
-            !       minval(F2E, mask=F2E/=c0), maxval(F2E, mask=F2E/=c0), &
-            !       sum(F2E, mask=F2E/=c0)/real(max(1,nE), dbl_kind)
-            !    write(nu_diag,9000) 'after stepu/v_C calls F2N min/max/avg =', &
-            !       minval(F2N, mask=F2N/=c0), maxval(F2N, mask=F2N/=c0), &
-            !       sum(F2N, mask=F2N/=c0)/real(max(1,nN), dbl_kind)
-            !    write(nu_diag,9000) 'after stepu/v_C calls KuE min/max/avg =', &
-            !       minval(KuE, mask=KuE/=c0), maxval(KuE, mask=KuE/=c0), &
-            !       sum(KuE, mask=KuE/=c0)/real(max(1,nE), dbl_kind)
-            !    write(nu_diag,9000) 'after stepu/v_C calls KuN min/max/avg =', &
-            !       minval(KuN, mask=KuN/=c0), maxval(KuN, mask=KuN/=c0), &
-            !       sum(KuN, mask=KuN/=c0)/real(max(1,nN), dbl_kind)
-            !    if (nKux > 0) then
-            !    write(nu_diag,9000) 'after stepu/v_C calls KuxE min/max/avg =', &
-            !          minval(KuxE, mask=KuxE/=c0), maxval(KuxE, mask=KuxE/=c0), &
-            !          sum(KuxE, mask=KuxE/=c0)/real(nKux, dbl_kind)
-            !    else
-            !    write(nu_diag,'(a)') 'after stepu/v_C calls KuxE: all zero.'
-            !    end if
-            !    if (nKuy > 0) then
-            !    write(nu_diag,9000) 'after stepu/v_C calls KuyN min/max/avg =', &
-            !          minval(KuyN, mask=KuyN/=c0), maxval(KuyN, mask=KuyN/=c0), &
-            !          sum(KuyN, mask=KuyN/=c0)/real(nKuy, dbl_kind)
-            !    else
-            !    write(nu_diag,'(a)') 'after stepu/v_C calls KuyN: all zero.'
-            !    end if
-            !    write(nu_diag,9000) 'KuyE coast min/max/avg =', &
-            !       minval(KuyE, mask=F2E>c0), maxval(KuyE, mask=F2E>c0), &
-            !       sum(KuyE, mask=F2E>c0)/real(max(1,nE), dbl_kind)
-
-            !    write(nu_diag,9000) 'KuxN coast min/max/avg =', &
-            !       minval(KuxN, mask=F2N>c0), maxval(KuxN, mask=F2N>c0), &
-            !       sum(KuxN, mask=F2N>c0)/real(max(1,nN), dbl_kind)
-            ! end if
-            ! ----------------------------------------------------------------------
-
             ! calls ice_haloUpdate, controls bundles and masks
             call dyn_haloUpdate (halo_info,       halo_info_mask,    &
                                  field_loc_Eface, field_type_vector, &
@@ -1202,21 +1204,6 @@
             call dyn_haloUpdate (halo_info,          halo_info_mask,    &
                                  field_loc_NEcorner, field_type_vector, &
                                  uvel, vvel)
-
-            ! if (ksub == ndte) then
-            !    nE = count(F2E /= c0);  nN = count(F2N /= c0)
-
-            !    write(nu_diag,9000) 'end-subcycle |u|_coast mean =', &
-            !       sum(sqrt(uvelE**2 + vvelE**2), mask=F2E/=c0) / real(max(1,nE),dbl_kind)
-            !    write(nu_diag,9000) 'end-subcycle |v|_coast mean =', &
-            !       sum(sqrt(uvelN**2 + vvelN**2), mask=F2N/=c0) / real(max(1,nN),dbl_kind)
-
-            !    ! Optional: relative to interior
-            !    write(nu_diag,9000) 'end-subcycle |u|_interior mean =', &
-            !       sum(sqrt(uvelE**2 + vvelE**2), mask=F2E==c0) / real(max(1, size(uvelE,1)*size(uvelE,2) - nE), dbl_kind)
-            !    write(nu_diag,9000) 'end-subcycle |v|_interior mean =', &
-            !       sum(sqrt(uvelN**2 + vvelN**2), mask=F2N==c0) / real(max(1, size(uvelN,1)*size(uvelN,2) - nN), dbl_kind)
-            ! end if
 
          enddo                     ! subcycling
 

@@ -25,7 +25,7 @@
       private
       public :: set_evp_parameters, stepu, stepuv_CD, stepu_C, stepv_C, &
                 principal_stress, init_dyn_shared, dyn_prep1, dyn_prep2, dyn_finish, &
-                seabed_stress_factor_LKD, seabed_stress_factor_prob, coastal_drag_stress_factor, &
+                seabed_stress_factor_LKD, seabed_stress_factor_prob, lateral_drag_stress_factor, &
                 deformations, deformationsC_T, deformationsCD_T, &
                 strain_rates, strain_rates_T, strain_rates_U_no_slip, strain_rates_U_free_slip, &
                 visc_replpress, &
@@ -56,13 +56,12 @@
          elasticDamp    ! coefficient for calculating the parameter E, elastic damping parameter
 
       ! other EVP parameters
-
       character (len=char_len), public :: &
          yield_curve          , & ! 'ellipse' ('teardrop' needs further testing)
          visc_method          , & ! method for viscosity calc at U points (C, CD grids)
-         seabed_stress_method , & ! method for seabed stress calculation
+         seabed_stress_method     ! method for seabed stress calculation
                                   ! LKD: Lemieux et al. 2015, probabilistic: Dupont et al. 2022
-         boundary_condition       ! 'no_slip' (Dirchlet) or 'free_slip' (Neumann); boundary conditions
+         
 
       real (kind=dbl_kind), parameter, public :: &
          ! u0     = 5e-5_dbl_kind, & ! residual velocity for seabed stress (m/s)
@@ -143,19 +142,35 @@
          threshold_hw        ! max water depth for grounding
                              ! see keel data from Amundrud et al. 2004 (JGR)
 
-      ! coastal drag parameters and settings
+      ! lateral drag parameters and settings
       logical (kind=log_kind), public :: &
-         coastal_drag       ! if true, coastal drag stress for landfast on
-
+         lateral_drag           ! enable/disable lateral drag stress computations
+      ! lateral drag switches/choices:
+      ! if boundary_condition == 'no_slip' then lateral_drag is disabled
+      ! conditions for form functions are done in evp(dt) prior to ndte loop
+      character (len=char_len), public :: &
+         boundary_condition, &  ! 'no_slip' (Dirchlet) or 'free_slip' (Neumann)
+         form_func              ! 'static', 'quad', 'sum', 'linear'
+      real(kind=dbl_kind), public :: &
+         Cs, &                  ! static function coefficient; Liu et al. (2022) eq.13; 5.0*10^{−4} (units m/s^2)
+         Cq, &                  ! quadratic coefficient (units m^-1)
+         C_L, &                 ! Linear (Rayleigh) coefficient for "linear" option: tau = mF * C_L * u; Units: 1/s
+         u_cap, &               ! quadratic capped method threshold for u/v; units m/s
+         u_cap_eff, &           ! effective cap (>=0), set in evp(dt)
+         u0                     ! residual velocity for lateral drag stress (and seabed stress) (units m/s)
+      ! lateral drag form function switches based 'form_func'
+      ! if form_func == 'sum' then static_switch = 1, and quad_switch = 1
+      real (kind=dbl_kind), public :: & 
+         static_switch, &         ! 1 (default); 1 = enable static form function, 0 = disable 
+         quad_switch,   &         ! 0 (default); 1 = enable quadratic form function, 0 = disable
+         quad_cap_switch, &       ! 0 (default); 1 = enable capped-quadratic form function, 0 = disable
+         linear_switch            ! 0 (default); 1 = enable linear form function, 0 = disable
+      ! diagnostic lateral drag stress terms
       real(kind=dbl_kind), dimension (:,:,:), allocatable, public :: &
          KuU , KuE , KuN, &
          KuxU, KuyU, &
          KuxE, KuyE, &
          KuxN, KuyN
-
-      real(kind=dbl_kind), public :: &
-         Cs, &  ! static function coefficient; Liu et al. (2022) eq.13; 1.0*10^{−4} m/s^2
-         u0     ! residual velocity for coastal drag stress (and seabed stress) (m/s)
 
       interface strain_rates_T
          module procedure strain_rates_Tdt
@@ -244,7 +259,7 @@
             stat=ierr)
          if (ierr/=0) call abort_ice(subname//': Out of memory')
          !---------------------------------------------------------
-         ! Allocate and initialise coastal drag coefficient fields
+         ! Allocate and initialise lateral drag coefficient fields
          !---------------------------------------------------------
          allocate( &
                   KuU  (nx_block,ny_block,max_blocks), &
@@ -697,10 +712,10 @@
          tauby       ! seabed stress, y-direction (N/m^2)
 
       real(kind=dbl_kind), dimension(nx_block,ny_block), intent(inout), optional :: &
-         Kux, Kuy    ! coastal drag stress factors in x- & y-directions (N/m^2)
+         Kux, Kuy    ! lateral drag stress factors in x- & y-directions (N/m^2)
       
       real(kind=dbl_kind), dimension(nx_block,ny_block), intent(out), optional :: &
-         Ku          ! coastal drag stress factor (N/m^2)
+         Ku          ! lateral drag stress factor (N/m^2)
 
       ! local variables
 
@@ -729,7 +744,7 @@
          TbU      (i,j) = c0
          taubx    (i,j) = c0
          tauby    (i,j) = c0
-         if (coastal_drag) then
+         if (lateral_drag) then
             Kux (i,j) = c0
             Kuy (i,j) = c0
             Ku  (i,j) = c0
@@ -1111,7 +1126,7 @@
                           uvel,       vvel,     &
                           Tb,                   &
                           Kux,        Kuy,      &
-                          Ku        )
+                          Ku)
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block, & ! block dimensions
@@ -1134,12 +1149,12 @@
          strintx , & ! divergence of internal ice stress, x (N/m^2)
          Cw      , & ! ocean-ice neutral drag coefficient
          vvel    , & ! y-component of velocity (m/s) interpolated to E location
-         Ku          ! coastal (lateral) stress factor (N/m^2)
+         Ku          ! lateral (lateral) stress factor (N/m^2)
 
       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
          uvel    , & ! x-component of velocity (m/s)
          taubx   , & ! seabed stress, x-direction (N/m^2)
-         Kux, Kuy    ! coastal (lateral) stress, x/y-directions (N/m^2)
+         Kux, Kuy    ! lateral (lateral) stress, x/y-directions (N/m^2)
 
       ! local variables
 
@@ -1156,9 +1171,12 @@
          Cl
 
       ! stepu_C locals (add near other locals)
-      real(kind=dbl_kind) :: u_noCDP, du
+      real(kind=dbl_kind) :: u_noCDP, du, umag_eff
       real(kind=dbl_kind) :: sum_du_coast, sum_absu_coast
       integer(kind=int_kind) :: n_coast
+
+      ! lateral drag
+      real(kind=dbl_kind) :: umag, invccc, phi
 
       character(len=*), parameter :: subname = '(stepu_C)'
 
@@ -1191,8 +1209,20 @@
          taux = vrel*waterx(i,j) ! NOTE this is not the entire
 
          ccc = sqrt(uold**2 + vold**2) + u0
-         Cb  = Tb(i,j) / ccc ! for seabed stress
-         Cl  = Ku(i,j) / ccc ! for coastal drag stress
+         ! Cb  = Tb(i,j) / ccc ! for seabed stress
+         ! Cl  = Ku(i,j) / ccc ! for lateral drag stress
+         umag   = ccc - u0                 ! saves an extra sqrt; umag >= 0
+         invccc = c1 / ccc
+         Cb     = Tb(i,j) * invccc ! seabed stress
+
+         ! Composite lateral drag coefficient added to cca (units kg/m^2/s):
+         umag_eff = min(umag, u_cap_eff)
+         phi = (static_switch * Cs * invccc) + &
+               (quad_switch * Cq * umag) + &
+               (quad_cap_switch * Cq * umag_eff) + &
+               (linear_switch * C_L)
+         Cl  = Ku(i,j) * phi
+
          cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb + Cl ! kg/m^2 s
          ccb = fm(i,j) + sign(c1,fm(i,j)) * vrel * sinw ! kg/m^2 s
 
@@ -1200,21 +1230,11 @@
          cc1 = strintx(i,j) + forcex(i,j) + taux + massdti(i,j)*(brlx*uold + revp*uvel_init(i,j))
          uvel(i,j) = (ccb*vold + cc1) / cca ! m/s
 
-         ! --- CDP effect diagnostic (does not alter state) ---
-         ! Hypothetical velocity if CDP were disabled this substep:
-         if (Cl > 0.0d0) then
-            u_noCDP        = (ccb*vold + cc1) / (cca - Cl)
-            du             = uvel(i,j) - u_noCDP        ! negative when CDP damps |u|
-            sum_du_coast   = sum_du_coast + du
-            sum_absu_coast = sum_absu_coast + abs(u_noCDP)
-            n_coast        = n_coast + 1
-         end if
-
          ! calculate seabed stress component for outputs
          ! only needed on last iteration.
          taubx(i,j) = -uvel(i,j)*Cb
 
-         ! calculate the coastal (lateral) drag stress component for output
+         ! calculate the lateral (lateral) drag stress component for output
          Kux(i,j) = -uvel(i,j)*Cl   ! normal-to-wall at E
          Kuy(i,j) = -vvel(i,j)*Cl   ! tangential-to-wall at E
 
@@ -1237,7 +1257,7 @@
                           uvel,       vvel,     &
                           Tb,                   &
                           Kux,        Kuy,      &
-                          Ku       )
+                          Ku)
 
       integer (kind=int_kind), intent(in) :: &
          nx_block, ny_block, & ! block dimensions
@@ -1260,12 +1280,12 @@
          strinty , & ! divergence of internal ice stress, y (N/m^2)
          Cw      , & ! ocean-ice neutral drag coefficient
          uvel    , & ! x-component of velocity (m/s) interpolated to N location
-         Ku          ! coastal (lateral) stress factor (N/m^2)
+         Ku          ! lateral (lateral) stress factor (N/m^2)
 
       real (kind=dbl_kind), dimension (nx_block,ny_block), intent(inout) :: &
          vvel    , & ! y-component of velocity (m/s)
          tauby   , & ! seabed stress, y-direction (N/m^2)
-         Kux, Kuy    ! coastal (lateral) stress, x/y-directions (N/m^2)
+         Kux, Kuy    ! lateral (lateral) stress, x/y-directions (N/m^2)
 
       ! local variables
 
@@ -1282,9 +1302,12 @@
          Cl
 
       ! stepv_C locals (add near other locals)
-      real(kind=dbl_kind) :: v_noCDP, dv
+      real(kind=dbl_kind) :: v_noCDP, dv, umag_eff
       real(kind=dbl_kind) :: sum_dv_coast, sum_absv_coast
       integer(kind=int_kind) :: n_coast
+
+      ! lateral drag
+      real(kind=dbl_kind) :: umag, invccc, phi
       
       character(len=*), parameter :: subname = '(stepv_C)'
       
@@ -1315,8 +1338,20 @@
          tauy = vrel*watery(i,j) ! NOTE this is not the entire ocn stress
 
          ccc = sqrt(uold**2 + vold**2) + u0
-         Cb  = Tb(i,j) / ccc ! for seabed stress
-         Cl  = Ku(i,j) / ccc ! for coastal drag stress
+         ! Cb  = Tb(i,j) / ccc ! for seabed stress
+         ! Cl  = Ku(i,j) / ccc ! for lateral drag stress
+         umag   = ccc - u0
+         invccc = c1 / ccc
+         Cb     = Tb(i,j) * invccc ! seabed stress
+
+         ! Composite lateral drag coefficient added to cca (units kg/m^2/s):
+         umag_eff = min(umag, u_cap_eff)
+         phi = (static_switch * Cs * invccc) + &
+               (quad_switch * Cq * umag) + &
+               (quad_cap_switch * Cq * umag_eff) + &
+               (linear_switch * C_L)
+         Cl  = Ku(i,j) * phi
+
          cca = (brlx + revp)*massdti(i,j) + vrel * cosw + Cb + Cl ! kg/m^2 s
          ccb = fm(i,j) + sign(c1,fm(i,j)) * vrel * sinw ! kg/m^2 s
 
@@ -1324,21 +1359,11 @@
          cc2 = strinty(i,j) + forcey(i,j) + tauy + massdti(i,j)*(brlx*vold + revp*vvel_init(i,j))
          vvel(i,j) = (-ccb*uold + cc2) / cca
 
-         ! --- CDP effect diagnostic (does not alter state) ---
-         ! Hypothetical velocity if CDP were disabled this substep:
-         if (Cl > 0.0d0) then
-            v_noCDP        = (-ccb*uold + cc2) / (cca - Cl)
-            dv             = vvel(i,j) - v_noCDP        ! negative when CDP damps |u|
-            sum_dv_coast   = sum_dv_coast + dv
-            sum_absv_coast = sum_absv_coast + abs(v_noCDP)
-            n_coast        = n_coast + 1
-         end if
-
          ! calculate seabed stress component for outputs
          ! only needed on last iteration.
          tauby(i,j) = -vvel(i,j)*Cb
 
-         ! calculate the coastal (lateral) drag stress component for output
+         ! calculate the lateral (lateral) drag stress component for output
          Kux(i,j) = -uvel(i,j)*Cl   ! tangential-to-wall at N 
          Kuy(i,j) = -vvel(i,j)*Cl   ! normal-to-wall at N
 
@@ -1429,7 +1454,7 @@
       end subroutine dyn_finish
 
 !=======================================================================
-! Compute coastal (lateral) drag "Ku" (for landfast ice) based on mean
+! Compute lateral (lateral) drag "Ku" (for landfast ice) based on mean
 ! sea ice thickness and a static-gridded Form factor (describing
 ! roughness of coastaline), and one namelist parameter Cs. This is based
 ! on the work done by:
@@ -1440,7 +1465,7 @@
 ! doi: https://doi.org/10.1029/2022JC018413 
 !
 ! authors: dpath2o
-      subroutine coastal_drag_stress_factor(nx_block, ny_block, &
+      subroutine lateral_drag_stress_factor(nx_block, ny_block, &
                                             imass   ,           &
                                             Ku      ,           &
                                             F2)
@@ -1450,12 +1475,12 @@
          implicit none
          integer(kind=int_kind), intent(in) :: nx_block, ny_block
          real(kind=dbl_kind), dimension(nx_block,ny_block), intent(in) :: &
-            imass , & ! mass of n-cell/dt (kg/m^2 s)
+            imass , & ! mass of n-cell/dt (kg/m^2 )
             F2        ! coastline form factor (drag coefficient); unitless
          real(kind=dbl_kind), dimension(nx_block,ny_block), intent(inout) :: &
-            Ku        ! coastline stress form factor; kg/m^2 * _ * m/s^2 = kg/(m*s^2) = Pascal (Pa)
-         Ku = imass * F2 * Cs
-      end subroutine coastal_drag_stress_factor
+            Ku        
+         Ku = imass * F2    ! units kg/m^2
+      end subroutine lateral_drag_stress_factor
 
 !=======================================================================
 ! Computes seabed (basal) stress factor TbU (landfast ice) based on mean
@@ -2520,9 +2545,9 @@
 
          ! Delta (in the denominator of zeta, eta)
          DeltaU(i,j)   = sqrt(divergU(i,j)**2 + e_factor*(tensionU(i,j)**2 + shearU(i,j)**2))
-         ! ! ---------- Diagnostics: print coastal U only (last subcycle) ----------
+         ! ! ---------- Diagnostics: print lateral U only (last subcycle) ----------
          ! if (ksub == ndte) then
-         !    ! U(i,j) is the NE corner of T(i,j). It is "coastal" if any of the
+         !    ! U(i,j) is the NE corner of T(i,j). It is "lateral" if any of the
          !    ! four faces meeting at the corner are land (mask==0).
          !    ! Adjacent faces around U(i,j): E(i,j), E(i,j-1), N(i,j), N(i-1,j)
          !    if (i >= 2 .and. j >= 2 .and. i <= nx_block-1 .and. j <= ny_block-1) then
