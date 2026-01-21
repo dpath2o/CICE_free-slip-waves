@@ -309,8 +309,8 @@
     ocn_data_type   = 'AFIM'
     ocn_data_freq   = 'daily'
     hmix_0          = 60
-    T_T             = 1
-    T_S             = 1
+    T_T             = 5
+    T_S             = 10
     a_0             = 0.15
     p_w             = 1
     bgc_data_type   = 'default'
