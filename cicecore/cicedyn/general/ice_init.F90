@@ -99,6 +99,7 @@
           atm_data_format, ocn_data_format, atm_data_version, &
           bgc_data_type, &
           ocn_data_type, ocn_data_freq, ocn_data_dir, wave_spec_file,  &
+          hmix_0, T_T, T_S, a_0, p_w, &
           oceanmixed_file, restore_ocn, trestore, &
           ice_data_type, ice_data_conc, ice_data_dist, &
           snw_filename, &
@@ -120,13 +121,13 @@
           ndte, kdyn, revised_evp, yield_curve, &
           evp_algorithm, visc_method,     &
           seabed_stress, seabed_stress_method, &
-          boundary_condition, &
           k1, k2, alphab, threshold_hw, Ktens,  &
           e_yieldcurve, e_plasticpot, coriolis, &
           ssh_stress, kridge, brlx, arlx,       &
           deltaminEVP, deltaminVP, capping,     &
           elasticDamp, dyn_area_min, dyn_mass_min, &
-          coastal_drag, boundary_condition, coastal_drag_stress_factor, Cs, u0
+          lateral_drag, boundary_condition, lateral_drag_stress_factor, &
+          Cs, Cq, u_cap, C_L, u0, form_func
       use ice_dyn_vp, only: &
           maxits_nonlin, precond, dim_fgmres, dim_pgmres, maxits_fgmres, &
           maxits_pgmres, monitor_nonlin, monitor_fgmres, &
@@ -249,7 +250,7 @@
 
 
       namelist /dynamics_nml/ &
-        boundary_condition, coastal_drag, Cs, u0,                       &
+        boundary_condition, lateral_drag, Cs, Cq, u_cap, C_L, form_func, u0,   &
         kdyn,           ndte,           revised_evp,    yield_curve,    &
         evp_algorithm,  elasticDamp,                                    &
         brlx,           arlx,           ssh_stress,                     &
@@ -300,7 +301,8 @@
         atm_data_dir,   ocn_data_dir,    bgc_data_dir,                  &
         atm_data_format, ocn_data_format, rotate_wind,                  &
         oceanmixed_file, atm_data_version,semi_implicit_Tsfc,           &
-        vapor_flux_correction
+        vapor_flux_correction, &
+        hmix_0, T_T, T_S, a_0, p_w
 
       !-----------------------------------------------------------------
       ! default values
@@ -421,8 +423,12 @@
 
       ! DYNAMICS
       boundary_condition    = 'no_slip'       ! 'no_slip' (Dirchlet) or 'free_slip' (Neumann); boundary conditions
-      coastal_drag          = .false.         ! if true, enable coastal drag parameterisation for landfast ice
+      lateral_drag          = .false.         ! if true, enable lateral drag parameterisation for landfast ice
+      form_func             = 'static'        ! 'static', 'quad', 'sum', 'linear'
       Cs                    = 1.0e-4_dbl_kind ! see Liu et al. (2022) section 3.3
+      Cq                    = 1.0_dbl_kind    ! see Liu et al. (2022) section 3.3
+      u_cap                 = 0.0_dbl_kind    
+      C_L                   = 0.0_dbl_kind    ! linear form function scaling coeficient (unitless)
       u0                    = 5.0e-4_dbl_kind ! see Lemieux et al. (2015) section 6
       kdyn                  = 1               ! type of dynamics (-1, 0 = off, 1 = evp, 2 = eap, 3 = vp)
       ndtd                  = 1               ! dynamic time steps per thermodynamic time step
@@ -587,6 +593,11 @@
       bgc_data_dir    = 'unknown_bgc_data_dir'
       ocn_data_type   = 'default'
       ocn_data_freq   = 'daily'
+      hmix_0          = 60
+      T_T             = 1
+      T_S             = 1
+      a_0             = 0.15
+      p_w             = 1
       ocn_data_dir    = 'unknown_ocn_data_dir'
       oceanmixed_file = 'unknown_oceanmixed_file' ! ocean forcing data
       restore_ocn     = .false.   ! restore sst if true
@@ -1044,8 +1055,12 @@
       call broadcast_scalar(kitd,                 master_task)
       call broadcast_scalar(kcatbound,            master_task)
       call broadcast_scalar(boundary_condition,   master_task)
-      call broadcast_scalar(coastal_drag,         master_task)
+      call broadcast_scalar(form_func,            master_task)
+      call broadcast_scalar(lateral_drag,         master_task)
       call broadcast_scalar(Cs,                   master_task)
+      call broadcast_scalar(Cq,                   master_task)
+      call broadcast_scalar(u_cap,                master_task)
+      call broadcast_scalar(C_L,                  master_task)
       call broadcast_scalar(u0,                   master_task)
       call broadcast_scalar(kdyn,                 master_task)
       call broadcast_scalar(ndtd,                 master_task)
@@ -1195,6 +1210,11 @@
       call broadcast_scalar(bgc_data_dir,         master_task)
       call broadcast_scalar(ocn_data_type,        master_task)
       call broadcast_scalar(ocn_data_freq,        master_task)
+      call broadcast_scalar(hmix_0,               master_task)
+      call broadcast_scalar(T_T,                  master_task)
+      call broadcast_scalar(T_S,                  master_task)
+      call broadcast_scalar(a_0,                  master_task)
+      call broadcast_scalar(p_w,                  master_task)
       call broadcast_scalar(ocn_data_dir,         master_task)
       call broadcast_scalar(oceanmixed_file,      master_task)
       call broadcast_scalar(restore_ocn,          master_task)
@@ -1490,6 +1510,14 @@
             if (my_task == master_task) then
                write(nu_diag,*) subname//' ERROR: invalid HORIZONTAL boundary condition/scheme'
                write(nu_diag,*) subname//' ERROR: boundary_condition should be either no_slip or free_slip'
+            endif
+            abort_list = trim(abort_list)//":44"
+         endif
+         if (form_func /= 'static' .and. form_func /= 'quad' .and. form_func /= 'quad_cap' &
+            .and. form_func /= 'sum' .and. form_func /= 'sum_quad_cap' .and. form_func /= 'linear') then
+            if (my_task == master_task) then
+               write(nu_diag,*) subname//' ERROR: invalid lateral drag form function scheme'
+               write(nu_diag,*) subname//' ERROR: form_func should be: static, quad, sum or linear'
             endif
             abort_list = trim(abort_list)//":44"
          endif
@@ -2104,6 +2132,9 @@
                if (grid_ice == 'C' .or. grid_ice == 'CD') then
                   write(nu_diag,1030) ' boundary_condition = ', trim(boundary_condition),' : horizontal boundary condition'
                endif
+               if (grid_ice == 'C' .or. grid_ice == 'CD' .and. lateral_drag) then
+                  write(nu_diag,1030) ' form_func = ', trim(form_func)
+               endif
                if (revised_evp) then
                   tmpstr2 = ' : revised EVP formulation used'
                   write(nu_diag,1002) ' arlx             = ', arlx, ' : stress equation factor alpha'
@@ -2386,6 +2417,11 @@
             write(nu_diag,*) '     WARNING: ocean mixed layer ON'
             write(nu_diag,*) '     WARNING: will impact ocean forcing interaction'
             write(nu_diag,*) '     WARNING: coupled forcing will be modified by mixed layer routine'
+            write(nu_diag,1002) '  hmix_0 = ', hmix_0
+            write(nu_diag,1002) '     T_T = ', T_T
+            write(nu_diag,1002) '     T_S = ', T_S
+            write(nu_diag,1002) '     a_0 = ', a_0
+            write(nu_diag,1002) '     p_w = ', p_w
          endif
          write(nu_diag,1030) ' saltflux_option  = ', trim(saltflux_option)
          if (trim(saltflux_option) == 'constant') then

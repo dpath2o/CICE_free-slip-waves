@@ -256,8 +256,8 @@
          umaskCD  (nx_block,ny_block,max_blocks), & ! land/boundary mask, velocity (U-cell)
          nmask    (nx_block,ny_block,max_blocks), & ! land/boundary mask (N-cell)
          emask    (nx_block,ny_block,max_blocks), & ! land/boundary mask (E-cell)
-         F2N      (nx_block,ny_block,max_blocks), & ! coastal drag form factors (N-cell)
-         F2E      (nx_block,ny_block,max_blocks), & ! coastal drag form factors (E-cell)
+         F2N      (nx_block,ny_block,max_blocks), & ! lateral drag form factors (N-cell)
+         F2E      (nx_block,ny_block,max_blocks), & ! lateral drag form factors (E-cell)
          opmask   (nx_block,ny_block,max_blocks), & ! land/boundary orphan mask (atm ocean/ice cell)
          lmask_n  (nx_block,ny_block,max_blocks), & ! northern hemisphere mask
          lmask_s  (nx_block,ny_block,max_blocks), & ! southern hemisphere mask

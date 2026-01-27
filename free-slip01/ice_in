@@ -10,10 +10,10 @@
     npt_unit             = 'm'
     npt                  = 12
     ndtd                 = 1
-    runtype              = 'continue'
+    runtype              = 'initial'
     ice_ic               = 'none'
     restart_ext          = .false.
-    use_restart_time     = .true.
+    use_restart_time     = .false.
     restart_format       = 'hdf5'
     restart_rearranger   = 'default'
     restart_iotasks      = -99
@@ -67,7 +67,7 @@
     history_deflate      = 0
     history_chunksize    = 0, 0
     hist_time_axis       = 'end'
-    write_ic             = .true.
+    write_ic             = .false.
     incond_dir           = './history/'
     incond_file          = 'iceh_ic'
     version_name         = 'CICE_6.6.2'
@@ -76,18 +76,18 @@
 &grid_nml
     grid_format       = 'nc'
     grid_type         = 'tripole'
-    grid_ice          = 'C'
+    grid_ice          = 'B'
     grid_atm          = 'A'
     grid_ocn          = 'B'
-    grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_Cgrid.nc'
+    grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM2-025_grid.nc'
     kmt_type          = 'file'
-    kmt_file          = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_kmt.nc'
+    kmt_file          = '/g/data/gv90/da1339/grounded_icebergs/MyThin_db/kmt_mod_thinned-0p75_v1p50_iter0.nc'
     bathymetry_file   = 'unknown_bathymetry_file'
     bathymetry_format = 'default'
     use_bathymetry    = .false.
     gridcpl_file      = 'unknown_gridcpl_file'
     grid_outfile      = .false.
-    F2_file           = '/g/data/gv90/da1339/coastal_drag/form_factors/AAD_high-res_cstln_v7p9_GI.nc'
+    F2_file           = '/g/data/gv90/da1339/coastal_drag/form_factors/ADD_high-res_cstln_v7p9_GI.nc'
     F2x_varname       = 'F2x'
     F2y_varname       = 'F2y'
     F2_map_method     = 'max'
@@ -160,12 +160,16 @@
 /
 
 &dynamics_nml
-    boundary_condition   = 'free_slip'
-    coastal_drag         = .true.
-    Cs                   = 1e-4
+    boundary_condition   = 'no_slip'
+    lateral_drag         = .false.
+    form_func            = 'quad'
+    Cs                   = 5e-4
+    Cq                   = 1.5
+    u_cap                = 0.0
+    C_L                  = 0.0
     u0                   = 5e-5
     kdyn                 = 1
-    ndte                 = 120
+    ndte                 = 240
     revised_evp          = .false.
     evp_algorithm        = 'standard_2d'
     brlx                 = 300.0
@@ -230,9 +234,9 @@
     dT_mlt          = 1.5
     rsnw_mlt        = 1500.
     kalg            = 0.6
-    sw_redist         = .false.
-    sw_frac           = 0.9d0
-    sw_dtemp          = 0.02d0
+    sw_redist       = .false.
+    sw_frac         = 0.9d0
+    sw_dtemp        = 0.02d0
 /
 
 &ponds_nml
@@ -304,12 +308,17 @@
     atm_data_version = '_undef'
     ocn_data_type   = 'AFIM'
     ocn_data_freq   = 'daily'
+    hmix_0          = 60
+    T_T             = 5
+    T_S             = 5
+    a_0             = 0.15
+    p_w             = 1
     bgc_data_type   = 'default'
     fe_data_type    = 'default'
     ice_data_type   = 'uniform'
     ice_data_conc   = 'p9'
     ice_data_dist   = 'uniform'
-    fyear_init      = 1994
+    fyear_init      = 1993
     ycycle          = 1
     atm_data_format = 'nc'
     atm_data_dir    = '/g/data/gv90/da1339/afim_input/ERA5/0p25/'
@@ -604,14 +613,14 @@
     f_strinty      = 'd'
     f_taubx        = 'x'
     f_tauby        = 'x'
-    f_KuxN         = 'd'
-    f_KuyN         = 'd'
-    f_KuxE         = 'd'
-    f_KuyE         = 'd'
-    f_Kux          = 'd'
-    f_Kuy          = 'd'
-    f_F2N          = 'd'
-    f_F2E          = 'd'
+    f_KuxN         = 'x'
+    f_KuyN         = 'x'
+    f_KuxE         = 'x'
+    f_KuyE         = 'x'
+    f_Kux          = 'x'
+    f_Kuy          = 'x'
+    f_F2N          = 'x'
+    f_F2E          = 'x'
     f_strength     = 'd'
     f_divu         = 'd'
     f_shear        = 'd'

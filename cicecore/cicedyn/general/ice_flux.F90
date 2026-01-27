@@ -31,6 +31,9 @@
       character (char_len), public :: &
          default_season ! seasonal default values for forcing
 
+      real(kind=dbl_kind), public :: &
+         hmix_0         ! initial (or fixed if standalone) mixed layer depth
+
       !-----------------------------------------------------------------
       ! Dynamics component
       ! All variables are assumed to be on the atm or ocn thermodynamic
@@ -112,13 +115,7 @@
          dardg1dt, & ! rate of area loss by ridging ice (1/s)
          dardg2dt, & ! rate of area gain by new ridges (1/s)
          dvirdgdt, & ! rate of ice volume ridged (m/s)
-         opening!,  & ! rate of opening due to divergence/shear (1/s)
-         ! KuxU,     & !
-         ! KuyU,     & ! 
-         ! KuxN,     & ! coastal drag stress components (N/m^2), x-direction N-points
-         ! KuyN,     & ! coastal drag stress components (N/m^2), y-direction N-points
-         ! KuxE,     & ! coastal drag stress components (N/m^2), x-direction E-points
-         ! KuyE        ! coastal drag stress components (N/m^2), y-direction E-points
+         opening     ! rate of opening due to divergence/shear (1/s)
 
       real (kind=dbl_kind), dimension (:,:,:,:), allocatable, public :: &
        ! ridging diagnostics in categories
@@ -153,10 +150,7 @@
          fmE      , & ! Coriolis param. * mass in E-cell (kg/s)
          TbE      , & ! factor for seabed stress (N/m^2)
          fmN      , & ! Coriolis param. * mass in N-cell (kg/s)
-         TbN      !, & ! factor for seabed stress (N/m^2)
-         ! KuU      , & ! 
-         ! KuN      , & ! coastal drag stress (N/m^2) at N-points
-         ! KuE          ! coastal drag stress (N/m^2) at E-points
+         TbN          ! factor for seabed stress (N/m^2)
 
       !-----------------------------------------------------------------
       ! Thermodynamic component
@@ -666,15 +660,6 @@
          stresspU   (nx_block,ny_block,max_blocks), & ! sigma11+sigma22
          stressmU   (nx_block,ny_block,max_blocks), & ! sigma11-sigma22
          stress12U  (nx_block,ny_block,max_blocks), & ! sigma12
-         ! KuU        (nx_block,ny_block,max_blocks),  & ! coastal drag stress at U (B-grid)
-         ! KuE        (nx_block,ny_block,max_blocks),  & ! coastal drag stress at E (C-grid)
-         ! KuN        (nx_block,ny_block,max_blocks),  & ! coastal drag stress at N (C-grid)
-         ! KuxU       (nx_block,ny_block,max_blocks),  & ! coastal drag stress x-comp (U)
-         ! KuyU       (nx_block,ny_block,max_blocks),  & ! coastal drag stress y-comp (U)
-         ! KuxE       (nx_block,ny_block,max_blocks),  & ! coastal drag stress x-comp (E)
-         ! KuyE       (nx_block,ny_block,max_blocks),  & ! coastal drag stress y-comp (E)
-         ! KuxN       (nx_block,ny_block,max_blocks),  & ! coastal drag stress x-comp (N)
-         ! KuyN       (nx_block,ny_block,max_blocks),  & ! coastal drag stress y-comp (N)
          stat=ierr)
       if (ierr/=0) call abort_ice('(alloc_flux): Out of memory (C or CD grid)')
 
@@ -828,11 +813,11 @@
       enddo
       enddo
 
-      sst   (:,:,:) = Tf(:,:,:)       ! sea surface temp (C)
-      qdp   (:,:,:) = c0              ! deep ocean heat flux (W/m^2)
-      hmix  (:,:,:) = 60              ! ocean mixed layer depth (m)
+      sst   (:,:,:) = Tf(:,:,:)         ! sea surface temp (C)
+      qdp   (:,:,:) = c0                ! deep ocean heat flux (W/m^2)
+      hmix  (:,:,:) = hmix_0            ! ocean mixed layer depth (m)
       hwater(:,:,:) = bathymetry(:,:,:) ! ocean water depth (m)
-      daice_da(:,:,:) = c0            ! data assimilation increment rate
+      daice_da(:,:,:) = c0              ! data assimilation increment rate
 
       !-----------------------------------------------------------------
       ! fluxes sent to atmosphere

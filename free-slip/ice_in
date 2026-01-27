@@ -7,8 +7,8 @@
     sec_init             = 0
     istep0               = 0
     dt                   = 1800.0
-    npt_unit             = 'm'
-    npt                  = 12
+    npt_unit             = 'd'
+    npt                  = 3
     ndtd                 = 1
     runtype              = 'initial'
     ice_ic               = 'none'
@@ -67,7 +67,7 @@
     history_deflate      = 0
     history_chunksize    = 0, 0
     hist_time_axis       = 'end'
-    write_ic             = .true.
+    write_ic             = .false.
     incond_dir           = './history/'
     incond_file          = 'iceh_ic'
     version_name         = 'CICE_6.6.2'
@@ -160,10 +160,13 @@
 /
 
 &dynamics_nml
-    boundary_condition   = 'no_slip'
-    coastal_drag         = .false.
+    boundary_condition   = 'free_slip'
+    coastal_drag         = .true.
     Cs                   = 5e-4
-    u0                   = 5e-4
+    Cq                   = 1.5
+    u_cap                = 0.0
+    C_L                  = 0.0
+    u0                   = 5e-5
     kdyn                 = 1
     ndte                 = 240
     revised_evp          = .false.
@@ -230,9 +233,9 @@
     dT_mlt          = 1.5
     rsnw_mlt        = 1500.
     kalg            = 0.6
-    sw_redist         = .false.
-    sw_frac           = 0.9d0
-    sw_dtemp          = 0.02d0
+    sw_redist       = .false.
+    sw_frac         = 0.9d0
+    sw_dtemp        = 0.02d0
 /
 
 &ponds_nml
@@ -304,6 +307,11 @@
     atm_data_version = '_undef'
     ocn_data_type   = 'AFIM'
     ocn_data_freq   = 'daily'
+    hmix_0          = 60
+    T_T             = 5
+    T_S             = 10
+    a_0             = 0.15
+    p_w             = 1
     bgc_data_type   = 'default'
     fe_data_type    = 'default'
     ice_data_type   = 'uniform'

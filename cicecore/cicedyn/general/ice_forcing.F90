@@ -144,6 +144,12 @@ module ice_forcing
   logical (kind=log_kind), public :: restore_ocn
   ! restoring time scale (days)
   integer (kind=int_kind), public :: trestore
+  ! AFIM_data() subroutine specific
+  real(kind=dbl_kind), public :: hmix_0, &  ! initial (or fixed if standalone) mixed layer depth
+                                 T_T,    &  ! SST restoring timescale [days]
+                                 T_S,    &  ! SSS restoring timescale [days]
+                                 a_0,    &  ! ice concentration threshold for taper (e.g. 0.15)
+                                 p_w        ! optional exponent (>=1), default 1.0
   ! restoring time scale (sec)
   real (kind=dbl_kind), public :: trest
   ! prints forcing debugging output if true
@@ -1947,16 +1953,10 @@ contains
        if (my_task.eq.master_task) write (nu_diag,*) subname,'  Qa',vmin,vmax
     endif                   ! debug_forcing
   end subroutine ERA5_data
-!=======================================================================
-   ! AFIM_data: Ocean forcing for standalone CICE using ORAS daily data
-   !
-   ! Based on working Dec.25 version with critical NaN handling added.
-   ! ORAS files contain NaN fill values over land - these must be replaced
-   ! with valid fallbacks BEFORE interpolation to prevent NaN propagation.
-   !
-   ! Author: DP@H2O, University of Tasmania
-   ! Revision: Jan.26 - added explicit NaN handling
+
    !=======================================================================
+   ! dpath2o, Dec.25
+   ! revised: caching + safe OpenMP + scalar u/v + per-year file advance
    subroutine AFIM_data(dt)
       use ice_blocks, only            : nx_block, ny_block
       use ice_read_write, only        : ice_read_nc, ice_open_nc, ice_close_nc
@@ -2367,240 +2367,6 @@ contains
    !       if (my_task == master_task) write(nu_diag,*) subname,'  vocn', vmin, vmax
    !    endif
    ! end subroutine AFIM_data
-
-!   !=======================================================================
-!   ! dpath2o, Feb.24
-!   subroutine AFIM_init
-!     use ice_blocks, only        : nx_block, ny_block
-!     use ice_domain_size, only   : max_blocks
-!     use ice_calendar, only      : isleap
-!     real(kind=dbl_kind), allocatable, dimension(:,:,:,:,:) :: ocn_frcg
-!     character(len=*), parameter :: subname = '(AFIM_init)'
-!     integer (kind=int_kind)     :: n, m, nrec ! field loop, temporal loop, length of time
-!     integer (kind=int_kind)     :: fid
-!     character(char_len)         :: vname(int(4))  ! variable names to search for in file
-!     data vname /  'sst', 'sss', 'u', 'v' /
-!     real (kind=dbl_kind), dimension (nx_block,ny_block,max_blocks) :: work1
-!     if (trim(ocn_data_freq)=='daily') then
-!        nrec = 365
-!        if (mod(myear,  4) == 0) nrec = 366
-!        if (mod(myear,400) == 0) nrec = 366
-!     elseif (trim(ocn_data_freq)=='weekly') then
-!        nrec = wk_per_yr
-!     elseif (trim(ocn_data_freq)=='monthly') then
-!        nrec = m_per_yr
-!     endif
-!     if (my_task.eq.master_task) write(nu_diag, *) subname, ' fyear : ', fyear
-!     if (my_task.eq.master_task) write(nu_diag, *) subname, ' nrec  : ', nrec
-!     allocate(ocn_frcg(nx_block,ny_block,max_blocks,nfld,nrec))
-!   end subroutine AFIM_init
-
-!   !=======================================================================
-!   ! dpath2o, Feb.24
-!   subroutine AFIM_data(dt)
-!     use ice_blocks, only            : nx_block, ny_block
-!     use ice_read_write, only        : ice_read_nc
-!     use ice_global_reductions, only : global_minval, global_maxval
-!     use ice_domain, only            : distrb_info, nblocks
-!     use ice_flux, only              : sss, sst, uocn, vocn, Tf
-!     use ice_grid, only              : hm, tmask, umask
-!     use ice_calendar, only          : days_per_year, months_per_year, mmonth, myear, isleap
-!     use ice_restart_shared, only    : restart
-!     real(kind=dbl_kind), intent(in) :: dt
-!     integer(kind=int_kind)          :: fid, ncid, i, j, n, lfyear, recnum, maxrec, recslot, dataloc, iblk
-!     real(kind=dbl_kind)             :: secday, eps, tt, sst_min, sst_max, sss_min, sss_max, uocn_min,&
-!                                        uocn_max, vocn_min, vocn_max, vmin, vmax, sst_thresh,&
-!                                        sss_high_thresh, sss_low_thresh, ispd_thresh
-!     character(len=64)               :: fieldname
-!     character(len=20)               :: subname = '(AFIM_data)'
-!     real(kind=dbl_kind), dimension(nx_block, ny_block, max_blocks) :: interp_sst, interp_sss,&
-!                                                                       interp_uocn, interp_vocn,&
-!                                                                       sst_curr, sst_prev, sss_curr,&
-!                                                                       sss_prev, uocn_curr, uocn_prev,&
-!                                                                       vocn_curr, vocn_prev
-!     sst_thresh       = 54.0 !deg.C
-!     sss_high_thresh  = 47.0 !psu
-!     sss_low_thresh   = 5.0  !psu
-!     ispd_thresh      = 2.5  !m/s
-!     ! get the seconds in a day from icepack as well as flush the diagnostics from icepack
-!     call icepack_query_parameters(secday_out=secday)
-!     call icepack_warnings_flush(nu_diag)
-!     if (icepack_warnings_aborted()) call abort_ice(error_message=subname, file=__FILE__, line=__LINE__)
-!     ! SET THE RECORD NUMBER & INTERPOLATION COEFFICIENTS
-!     ! the record number is the time index value which determines which time record to extract from the 'forcing' file
-!     ! we set it each time this sub-routine is called to the corresponding frequency of the ocean forcing
-!     ! monthly :: the current month, mid-month
-!     ! daily   :: the current yearday in the middle of that day
-!     ! weekly  :: every 7th day
-!     recslot = 2 ! 2 = second-half, 1 = first-half
-!     dataloc = 2 ! end of period
-!     if (trim(ocn_data_freq)=='monthly') then
-!         maxrec = months_per_year
-!         recnum = mmonth
-!         call interp_coeff_monthly(recslot-1)
-!     elseif (trim(ocn_data_freq)=='daily') then
-!        maxrec = 365
-!        if (mod(myear,  4) == 0) maxrec = 366
-!        if (mod(myear,400) == 0) maxrec = 366
-!        recnum = int(yday) - int(real(msec,kind=dbl_kind)/secday)
-!        call interp_coeff(recnum, recslot, secday, dataloc)
-!     elseif (trim(ocn_data_freq)=='weekly') then
-!         maxrec = days_per_year/int(7)
-!         recnum = int(yday/7)
-!         if (recnum > maxrec) then
-!             recnum = maxrec
-!         endif
-!         call interp_coeff(recnum, recslot, secday*7, dataloc)
-!     endif
-!     if (my_task.eq.master_task) write(nu_diag, *) subname, ' myear, mmonth            : ', myear, mmonth
-!     if (my_task.eq.master_task) write(nu_diag, *) subname, ' maximum records          : ', maxrec
-!     if (my_task.eq.master_task) write(nu_diag, *) subname, ' current record           : ', recnum
-!     if (my_task.eq.master_task) write(nu_diag, *) subname, ' c1,c2: ', c1intp,c2intp
-!     ! ADVANCE THE YEAR
-!     ! only do so when the model year is greater than the initial year and the first time index
-!     if (myear.gt.fyear_init .and. recnum.eq.1) then
-!        call AFIM_files(myear)
-!     endif
-!     if (my_task.eq.master_task) write(nu_diag, *) subname, ' reading in each ocean forcing field for time record', recnum
-!     ! Open the netCDF file and read SST, SSS, U, V fields for current and next time steps
-!     if (my_task==master_task) write(nu_diag,*) subname, ' F_AFIM (file): ', trim(F_AFIM)
-!     call ice_open_nc(F_AFIM, fid)
-!     ! Read SST for current and next time step
-!     call ice_read_nc(fid, recnum, 'sst', sst_curr, debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-!     if (recnum>1) then
-!        call ice_read_nc(fid, recnum - 1, 'sst', sst_prev, debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-!     endif
-!     ! Read SSS for current and next time step
-!     call ice_read_nc(fid, recnum, 'sss', sss_curr, debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-!     if (recnum>1) then
-!        call ice_read_nc(fid, recnum - 1, 'sss', sss_prev, debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-!     endif
-!     ! Read U and V for current and next time step
-!     ! call ice_read_nc(fid, recnum, 'u', uocn_curr, debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
-!     call ice_read_nc(fid, recnum, 'u', uocn_curr, debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-!     ! call ice_read_nc(fid, recnum, 'v', vocn_curr, debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
-!     call ice_read_nc(fid, recnum, 'v', vocn_curr, debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-!     if (recnum>1) then
-!        ! call ice_read_nc(fid, recnum - 1, 'u', uocn_prev, debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
-!        call ice_read_nc(fid, recnum - 1, 'u', uocn_prev, debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-!        ! call ice_read_nc(fid, recnum - 1, 'v', vocn_prev, debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
-!        call ice_read_nc(fid, recnum - 1, 'v', vocn_prev, debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-!     endif
-!     call ice_close_nc(fid)
-! !$OMP PARALLEL DO PRIVATE(iblk, j, i) SHARED(sst_data, sss_data, uocn_data, vocn_data, interp_sst, interp_sss, interp_uocn, interp_vocn, sst_curr, sst_prev, sss_curr, sss_prev, uocn_curr, uocn_prev, vocn_curr, vocn_prev, sst, sss, uocn, vocn, hm, c1, c0, Tf, dt, trest)
-!     do iblk = 1, nblocks
-!        ! Interpolate and assign SST data
-!        if (recnum>1) then
-!           sst_data(:,:,1,iblk) = sst_prev(:,:,iblk)
-!           sst_data(:,:,2,iblk) = sst_curr(:,:,iblk)
-!        else
-!           sst_data(:,:,1,iblk) = sst_curr(:,:,iblk)
-!           sst_data(:,:,2,iblk) = sst_curr(:,:,iblk)
-!        endif
-!        call interpolate_data(sst_data, interp_sst)
-!        ! 'RESTORE' (ADDITIONAL SMOOTHING) THE SST VALUES BASED ON A PERIOD OF TIME
-!        if (restore_ocn) then
-!           do j = 1, ny_block
-!              do i = 1, nx_block
-!                 sst(i, j, iblk) = sst(i, j, iblk) + (interp_sst(i, j, iblk) - sst(i, j, iblk)) * dt / trest
-!              enddo
-!           enddo
-!        endif
-!        ! Interpolate and assign SSS data
-!        if (recnum>1) then
-!           sss_data(:,:,1,iblk) = sss_prev(:,:,iblk)
-!           sss_data(:,:,2,iblk) = sss_curr(:,:,iblk)
-!        else
-!           sss_data(:,:,1,iblk) = sss_curr(:,:,iblk)
-!           sss_data(:,:,2,iblk) = sss_curr(:,:,iblk)
-!        endif
-!        call interpolate_data(sss_data, interp_sss)
-!        do j = 1, ny_block
-!           do i = 1, nx_block
-!              if (hm(i, j, iblk) == c1) then
-!                 sss(i, j, iblk) = interp_sss(i, j, iblk)
-!              endif
-!           enddo
-!        enddo
-!        ! Interpolate and assign UOCN data
-!        if (recnum>1) then
-!           uocn_data(:,:,1,iblk) = uocn_prev(:,:,iblk)
-!           uocn_data(:,:,2,iblk) = uocn_curr(:,:,iblk)
-!        else
-!           uocn_data(:,:,1,iblk) = uocn_curr(:,:,iblk)
-!           uocn_data(:,:,2,iblk) = uocn_curr(:,:,iblk)
-!        endif
-!        call interpolate_data(uocn_data, interp_uocn)
-!        do j = 1, ny_block
-!           do i = 1, nx_block
-!              if (hm(i, j, iblk) == c1) then
-!                 uocn(i, j, iblk) = interp_uocn(i, j, iblk)
-!              endif
-!           enddo
-!        enddo
-!        ! Interpolate and assign VOCN data
-!        if (recnum>1) then
-!           vocn_data(:,:,1,iblk) = vocn_prev(:,:,iblk)
-!           vocn_data(:,:,2,iblk) = vocn_curr(:,:,iblk)
-!        else
-!           vocn_data(:,:,1,iblk) = vocn_curr(:,:,iblk)
-!           vocn_data(:,:,2,iblk) = vocn_curr(:,:,iblk)
-!        endif
-!        call interpolate_data(vocn_data, interp_vocn)
-!        do j = 1, ny_block
-!           do i = 1, nx_block
-!              if (hm(i, j, iblk) == c1) then
-!                 vocn(i, j, iblk) = interp_vocn(i, j, iblk)
-!              endif
-!           enddo
-!        enddo
-!     enddo
-! !$OMP END PARALLEL DO
-!     !$OMP PARALLEL DO PRIVATE(iblk, j, i) SHARED(sst, sss, uocn, vocn, hm, c1, c0, Tf, dt, trest)
-!     do iblk = 1, nblocks
-!        do j = 1, ny_block
-!           do i = 1, nx_block
-!              if (hm(i,j,iblk) == c0) then
-!                 sst (i,j,iblk) = c0
-!                 sss (i,j,iblk) = c0
-!                 uocn(i,j,iblk) = c0
-!                 vocn(i,j,iblk) = c0
-!              else
-!                 sst(i,j,iblk) = max(sst(i,j,iblk), Tf(i,j,iblk))
-!                 if (sst(i,j,iblk) > sst_thresh) then
-!                    sst(i,j,iblk) = sst_thresh
-!                 endif
-!                 sss(i,j,iblk) = max(sss(i,j,iblk), c0)
-!                 if (sss(i, j, iblk) > sss_high_thresh) then
-!                    sss(i,j,iblk) = sss_high_thresh
-!                 endif
-!                 if (sss(i, j, iblk) < sss_low_thresh) then
-!                    sss(i,j,iblk) = sss_low_thresh
-!                 endif
-!                 if (ABS(uocn(i, j, iblk)) > ispd_thresh) uocn(i, j, iblk) = c0
-!                 if (ABS(vocn(i, j, iblk)) > ispd_thresh) vocn(i, j, iblk) = c0
-!              endif
-!           enddo
-!        enddo
-!     enddo
-!     !$OMP END PARALLEL DO
-!     call ocn_freezing_temperature
-!     if (debug_forcing .or. local_debug) then
-!        if (my_task.eq.master_task) write (nu_diag,*) subname,' AFIM global min max for forcing time record index: ', recnum
-!        vmin = global_minval(sst,distrb_info,tmask)
-!        vmax = global_maxval(sst,distrb_info,tmask)
-!        if (my_task.eq.master_task) write (nu_diag,*) subname,'  sst',vmin,vmax
-!        vmin = global_minval(sss,distrb_info,tmask)
-!        vmax = global_maxval(sss,distrb_info,tmask)
-!        if (my_task.eq.master_task) write (nu_diag,*) subname,'  sss',vmin,vmax
-!        vmin =global_minval(uocn,distrb_info,umask)
-!        vmax =global_maxval(uocn,distrb_info,umask)
-!        if (my_task.eq.master_task) write (nu_diag,*) subname,'  uocn',vmin,vmax
-!        vmin = global_minval(vocn,distrb_info,umask)
-!        vmax = global_maxval(vocn,distrb_info,umask)
-!        if (my_task.eq.master_task) write (nu_diag,*) subname,'  vocn',vmin,vmax
-!     endif
-!   end subroutine AFIM_data
 
   !=======================================================================
   subroutine compute_shortwave(nx_block, ny_block, ilo, ihi, jlo, jhi, TLON, TLAT, hm, Qa, cldf, fsw)

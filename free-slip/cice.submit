@@ -1,6 +1,11 @@
 #!/bin/csh -f
 
+<<<<<<< HEAD
 qsub ./cice.run
 echo "`date` ${0}: free-slip job submitted" >> ${PWD}/README.case
+=======
+# Run
+./cice.run $PBS_NCPUS
+>>>>>>> refs/remotes/free/main
 
 
