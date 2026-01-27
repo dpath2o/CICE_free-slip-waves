@@ -14,7 +14,7 @@
     ice_ic               = 'none'
     restart_ext          = .false.
     use_restart_time     = .false.
-    restart_format       = 'hdf5'
+    restart_format       = 'default'
     restart_rearranger   = 'default'
     restart_iotasks      = -99
     restart_root         = -99
@@ -41,7 +41,7 @@
     debug_model_j        = -1
     debug_model_iblk     = -1
     debug_model_task     = -1
-    debug_forcing        = .false.
+    debug_forcing        = .true.
     print_global         = .true.
     print_points         = .true.
     timer_stats          = .false.
@@ -59,7 +59,7 @@
     history_dir          = './history/'
     history_file         = 'iceh'
     history_precision    = 4
-    history_format       = 'hdf5'
+    history_format       = 'default'
     history_rearranger   = 'default'
     history_iotasks      = -99
     history_root         = -99
@@ -76,12 +76,12 @@
 &grid_nml
     grid_format       = 'nc'
     grid_type         = 'tripole'
-    grid_ice          = 'C'
+    grid_ice          = 'B'
     grid_atm          = 'A'
     grid_ocn          = 'B'
-    grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_Cgrid.nc'
+    grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM2-025_grid.nc'
     kmt_type          = 'file'
-    kmt_file          = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_kmt.nc'
+    kmt_file          = '/g/data/gv90/da1339/grounded_icebergs/MyThin_db/kmt_mod_thinned-0p75_v1p50_iter0.nc'
     bathymetry_file   = 'unknown_bathymetry_file'
     bathymetry_format = 'default'
     use_bathymetry    = .false.
@@ -104,7 +104,7 @@
     close_boundaries  = .true.
     ncat              = 5
     nfsd              = 1
-    nilyr             = 7
+    nilyr             = 4
     nslyr             = 1
     nblyr             = 1
 /
@@ -160,12 +160,12 @@
 /
 
 &dynamics_nml
-    boundary_condition   = 'free_slip'
-    coastal_drag         = .true.
+    boundary_condition   = 'no_slip'
+    coastal_drag         = .false.
     Cs                   = 5e-4
     u0                   = 5e-4
     kdyn                 = 1
-    ndte                 = 120
+    ndte                 = 240
     revised_evp          = .false.
     evp_algorithm        = 'standard_2d'
     brlx                 = 300.0
@@ -307,7 +307,7 @@
     bgc_data_type   = 'default'
     fe_data_type    = 'default'
     ice_data_type   = 'uniform'
-    ice_data_conc   = 'p9'
+    ice_data_conc   = 'default'
     ice_data_dist   = 'uniform'
     fyear_init      = 1993
     ycycle          = 1
@@ -332,7 +332,7 @@
     distribution_type = 'rake'
     distribution_wght = 'latitude'
     distribution_wght_file = 'unknown'
-    ew_boundary_type  = 'open'
+    ew_boundary_type  = 'cyclic'
     ns_boundary_type  = 'tripoleT'
     maskhalo_dyn      = .false.
     maskhalo_remap    = .false.
@@ -491,29 +491,29 @@
     f_tlat         = .true.
     f_ulon         = .true.
     f_ulat         = .true.
-    f_nlon         = .true.
-    f_nlat         = .true.
-    f_elon         = .true.
-    f_elat         = .true.
+    f_nlon         = .false.
+    f_nlat         = .false.
+    f_elon         = .false.
+    f_elat         = .false.
     f_tmask        = .true.
     f_umask        = .true.
-    f_nmask        = .true.
-    f_emask        = .true.
+    f_nmask        = .false.
+    f_emask        = .false.
     f_blkmask      = .true.
     f_tarea        = .true.
     f_uarea        = .true.
-    f_narea        = .true.
-    f_earea        = .true.
+    f_narea        = .false.
+    f_earea        = .false.
     f_dxt          = .true.
     f_dyt          = .true.
     f_dxu          = .true.
     f_dyu          = .true.
-    f_dxe          = .true.
-    f_dye          = .true.
-    f_dxn          = .true.
-    f_dyn          = .true.
-    f_HTN          = .true.
-    f_HTE          = .true.
+    f_dxe          = .false.
+    f_dye          = .false.
+    f_dxn          = .false.
+    f_dyn          = .false.
+    f_HTN          = .false.
+    f_HTE          = .false.
     f_ANGLE        = .true.
     f_ANGLET       = .true.
     f_NCAT         = .true.
@@ -604,14 +604,14 @@
     f_strinty      = 'd'
     f_taubx        = 'x'
     f_tauby        = 'x'
-    f_KuxN         = 'd'
-    f_KuyN         = 'd'
-    f_KuxE         = 'd'
-    f_KuyE         = 'd'
-    f_Kux          = 'd'
-    f_Kuy          = 'd'
-    f_F2N          = 'd'
-    f_F2E          = 'd'
+    f_KuxN         = 'x'
+    f_KuyN         = 'x'
+    f_KuxE         = 'x'
+    f_KuyE         = 'x'
+    f_Kux          = 'x'
+    f_Kuy          = 'x'
+    f_F2N          = 'x'
+    f_F2E          = 'x'
     f_strength     = 'd'
     f_divu         = 'd'
     f_shear        = 'd'

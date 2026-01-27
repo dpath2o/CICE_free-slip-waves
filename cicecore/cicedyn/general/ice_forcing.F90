@@ -1947,19 +1947,27 @@ contains
        if (my_task.eq.master_task) write (nu_diag,*) subname,'  Qa',vmin,vmax
     endif                   ! debug_forcing
   end subroutine ERA5_data
-
+!=======================================================================
+   ! AFIM_data: Ocean forcing for standalone CICE using ORAS daily data
+   !
+   ! Based on working Dec.25 version with critical NaN handling added.
+   ! ORAS files contain NaN fill values over land - these must be replaced
+   ! with valid fallbacks BEFORE interpolation to prevent NaN propagation.
+   !
+   ! Author: DP@H2O, University of Tasmania
+   ! Revision: Jan.26 - added explicit NaN handling
    !=======================================================================
-   ! dpath2o, Dec.25
-   ! revised: caching + safe OpenMP + scalar u/v + per-year file advance
    subroutine AFIM_data(dt)
       use ice_blocks, only            : nx_block, ny_block
       use ice_read_write, only        : ice_read_nc, ice_open_nc, ice_close_nc
       use ice_global_reductions, only : global_minval, global_maxval
       use ice_domain, only            : distrb_info, nblocks
+      use ice_domain_size, only       : max_blocks
       use ice_flux, only              : sss, sst, uocn, vocn, Tf
       use ice_grid, only              : hm, tmask, umask
       use ice_calendar, only          : days_per_year, months_per_year, mmonth, myear, yday, mday, msec
       use ice_restart_shared, only    : restart
+      use, intrinsic :: ieee_arithmetic, only : ieee_is_finite
       implicit none
       real(kind=dbl_kind), intent(in) :: dt
       integer(kind=int_kind)          :: fid
@@ -1977,12 +1985,20 @@ contains
       real(kind=dbl_kind), parameter  :: sss_high_thresh = 47.0_dbl_kind  ! psu
       real(kind=dbl_kind), parameter  :: sss_low_thresh  =  5.0_dbl_kind  ! psu
       real(kind=dbl_kind), parameter  :: ispd_thresh     =  2.5_dbl_kind  ! m/s
+      ! --- NaN fallback values ---
+      real(kind=dbl_kind), parameter  :: sst_nan_fallback = -1.8_dbl_kind  ! near freezing
+      real(kind=dbl_kind), parameter  :: sss_nan_fallback = 34.0_dbl_kind  ! typical ocean
+      real(kind=dbl_kind), parameter  :: uv_nan_fallback  =  0.0_dbl_kind  ! no current
       ! --- cached state (persists across calls) ---
       integer(kind=int_kind), save    :: last_fyr = -999999
       integer(kind=int_kind), save    :: last_rec_slot(2) = (/ -999999, -999999 /)  ! slot1, slot2
+      ! --- diagnostic counters ---
+      integer(kind=int_kind)          :: n_nan_sst, n_nan_sss
+
       call icepack_query_parameters(secday_out=secday)
       call icepack_warnings_flush(nu_diag)
       if (icepack_warnings_aborted()) call abort_ice(error_message=subname, file=__FILE__, line=__LINE__)
+
       !---------------------------------------------------------------------
       ! 1) Determine forcing year (supports ycycle logic used elsewhere)
       !---------------------------------------------------------------------
@@ -1998,6 +2014,7 @@ contains
             write(nu_diag,*) subname,' F_AFIM = ', trim(F_AFIM)
          endif
       endif
+
       !---------------------------------------------------------------------
       ! 2) Determine which two records we need (rec0=slot1, rec1=slot2),
       !    and set interpolation coefficients c1intp/c2intp.
@@ -2032,6 +2049,7 @@ contains
          rec0   = max(1, rec1-1)
          call interp_coeff(rec1, 2, secday, dataloc)
       endif
+
       !---------------------------------------------------------------------
       ! 3) Read only when needed (record changed since last call).
       !    slot1 holds rec0, slot2 holds rec1.
@@ -2049,8 +2067,10 @@ contains
          if (need_read_slot1) then
             call ice_read_nc(fid, rec0, 'sst', sst_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
             call ice_read_nc(fid, rec0, 'sss', sss_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-            call ice_read_nc(fid, rec0, 'u'  , uocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-            call ice_read_nc(fid, rec0, 'v'  , vocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+            call ice_read_nc(fid, rec0, 'u', uocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
+            call ice_read_nc(fid, rec0, 'v', vocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
+            ! call ice_read_nc(fid, rec0, 'u'  , uocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+            ! call ice_read_nc(fid, rec0, 'v'  , vocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
             last_rec_slot(1) = rec0
          endif
          ! --- slot 2 (rec1) ---
@@ -2064,13 +2084,52 @@ contains
             else
                call ice_read_nc(fid, rec1, 'sst', sst_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
                call ice_read_nc(fid, rec1, 'sss', sss_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-               call ice_read_nc(fid, rec1, 'u'  , uocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
-               call ice_read_nc(fid, rec1, 'v'  , vocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+               ! call ice_read_nc(fid, rec1, 'u'  , uocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+               ! call ice_read_nc(fid, rec1, 'v'  , vocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+               call ice_read_nc(fid, rec0, 'u', uocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
+               call ice_read_nc(fid, rec0, 'v', vocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_NEcorner, field_type=field_type_vector)
             endif
             last_rec_slot(2) = rec1
          endif
          call ice_close_nc(fid)
+
+         !------------------------------------------------------------------
+         ! CRITICAL FIX: Replace NaN values with fallbacks AFTER reading
+         ! ORAS has NaN fill values over land and sometimes under ice.
+         ! This must happen BEFORE interpolation to prevent NaN propagation.
+         !------------------------------------------------------------------
+         n_nan_sst = 0
+         n_nan_sss = 0
+         !$OMP PARALLEL DO PRIVATE(iblk, j, i) REDUCTION(+:n_nan_sst, n_nan_sss)
+         do iblk = 1, nblocks
+            do j = 1, ny_block
+               do i = 1, nx_block
+                  ! Slot 1
+                  if (.not. ieee_is_finite(sst_data(i,j,1,iblk))) then
+                     sst_data(i,j,1,iblk) = sst_nan_fallback
+                     n_nan_sst = n_nan_sst + 1
+                  endif
+                  if (.not. ieee_is_finite(sss_data(i,j,1,iblk))) then
+                     sss_data(i,j,1,iblk) = sss_nan_fallback
+                     n_nan_sss = n_nan_sss + 1
+                  endif
+                  if (.not. ieee_is_finite(uocn_data(i,j,1,iblk))) uocn_data(i,j,1,iblk) = uv_nan_fallback
+                  if (.not. ieee_is_finite(vocn_data(i,j,1,iblk))) vocn_data(i,j,1,iblk) = uv_nan_fallback
+                  ! Slot 2
+                  if (.not. ieee_is_finite(sst_data(i,j,2,iblk))) sst_data(i,j,2,iblk) = sst_nan_fallback
+                  if (.not. ieee_is_finite(sss_data(i,j,2,iblk))) sss_data(i,j,2,iblk) = sss_nan_fallback
+                  if (.not. ieee_is_finite(uocn_data(i,j,2,iblk))) uocn_data(i,j,2,iblk) = uv_nan_fallback
+                  if (.not. ieee_is_finite(vocn_data(i,j,2,iblk))) vocn_data(i,j,2,iblk) = uv_nan_fallback
+               enddo
+            enddo
+         enddo
+         !$OMP END PARALLEL DO
+
+         if (my_task == master_task .and. (debug_forcing .or. local_debug)) then
+            write(nu_diag,*) subname,' NaN replacements: sst=', n_nan_sst, ' sss=', n_nan_sss
+         endif
       endif
+
       !---------------------------------------------------------------------
       ! 4) Apply interpolation each timestep (NO nested OpenMP; no races)
       !---------------------------------------------------------------------
@@ -2110,7 +2169,9 @@ contains
          enddo
       enddo
       !$OMP END PARALLEL DO
+
       call ocn_freezing_temperature
+
       if (debug_forcing .or. local_debug) then
          if (my_task == master_task) write(nu_diag,*) subname,' global min/max after update (rec0/rec1): ', rec0, rec1
          vmin = global_minval(sst ,distrb_info,tmask)
@@ -2127,6 +2188,185 @@ contains
          if (my_task == master_task) write(nu_diag,*) subname,'  vocn', vmin, vmax
       endif
    end subroutine AFIM_data
+   ! !=======================================================================
+   ! ! dpath2o, Dec.25
+   ! ! revised: caching + safe OpenMP + scalar u/v + per-year file advance
+   ! subroutine AFIM_data(dt)
+   !    use ice_blocks, only            : nx_block, ny_block
+   !    use ice_read_write, only        : ice_read_nc, ice_open_nc, ice_close_nc
+   !    use ice_global_reductions, only : global_minval, global_maxval
+   !    use ice_domain, only            : distrb_info, nblocks
+   !    use ice_flux, only              : sss, sst, uocn, vocn, Tf
+   !    use ice_grid, only              : hm, tmask, umask
+   !    use ice_calendar, only          : days_per_year, months_per_year, mmonth, myear, yday, mday, msec
+   !    use ice_restart_shared, only    : restart
+   !    implicit none
+   !    real(kind=dbl_kind), intent(in) :: dt
+   !    integer(kind=int_kind)          :: fid
+   !    integer(kind=int_kind)          :: i, j, iblk
+   !    integer(kind=int_kind)          :: rec0, rec1, maxrec, dataloc
+   !    integer(kind=int_kind)          :: fyr, modadj
+   !    real(kind=dbl_kind)             :: secday
+   !    real(kind=dbl_kind)             :: sst_tgt, sss_tgt, u_tgt, v_tgt
+   !    real(kind=dbl_kind)             :: vmin, vmax
+   !    logical                         :: need_read_slot1, need_read_slot2
+   !    logical                         :: first_half
+   !    character(len=*), parameter     :: subname = '(AFIM_data)'
+   !    ! --- thresholds / sanity clamps (retain your choices) ---
+   !    real(kind=dbl_kind), parameter  :: sst_thresh      = 54.0_dbl_kind  ! degC
+   !    real(kind=dbl_kind), parameter  :: sss_high_thresh = 47.0_dbl_kind  ! psu
+   !    real(kind=dbl_kind), parameter  :: sss_low_thresh  =  5.0_dbl_kind  ! psu
+   !    real(kind=dbl_kind), parameter  :: ispd_thresh     =  2.5_dbl_kind  ! m/s
+   !    ! --- cached state (persists across calls) ---
+   !    integer(kind=int_kind), save    :: last_fyr = -999999
+   !    integer(kind=int_kind), save    :: last_rec_slot(2) = (/ -999999, -999999 /)  ! slot1, slot2
+   !    call icepack_query_parameters(secday_out=secday)
+   !    call icepack_warnings_flush(nu_diag)
+   !    if (icepack_warnings_aborted()) call abort_ice(error_message=subname, file=__FILE__, line=__LINE__)
+   !    !---------------------------------------------------------------------
+   !    ! 1) Determine forcing year (supports ycycle logic used elsewhere)
+   !    !---------------------------------------------------------------------
+   !    modadj = abs((min(0,myear-fyear_init)/ycycle + 1) * ycycle)
+   !    fyr    = fyear_init + mod(myear - fyear_init + modadj, ycycle)
+   !    if (fyr /= last_fyr) then
+   !       call AFIM_files(fyr)                 ! updates F_AFIM -> ORAS_YYYY.nc
+   !       last_fyr = fyr
+   !       last_rec_slot(1) = -999999
+   !       last_rec_slot(2) = -999999
+   !       if (my_task == master_task) then
+   !          write(nu_diag,*) subname,' switching forcing year -> ', fyr
+   !          write(nu_diag,*) subname,' F_AFIM = ', trim(F_AFIM)
+   !       endif
+   !    endif
+   !    !---------------------------------------------------------------------
+   !    ! 2) Determine which two records we need (rec0=slot1, rec1=slot2),
+   !    !    and set interpolation coefficients c1intp/c2intp.
+   !    !---------------------------------------------------------------------
+   !    dataloc = 2  ! data located at end of interval (matches your prior usage)
+   !    if (trim(ocn_data_freq) == 'monthly') then
+   !       maxrec = months_per_year
+   !       ! midpoint is at day 15, 00:00; treat (mday<15) as first half
+   !       first_half = (int(mday) < 15) .or. (int(mday) == 15 .and. int(msec) == 0)
+   !       if (first_half) then
+   !          ! slot2 = current month, slot1 = previous month (wrap within same file)
+   !          rec1 = max(1, min(maxrec, mmonth))
+   !          rec0 = rec1 - 1
+   !          if (rec0 < 1) rec0 = maxrec
+   !          call interp_coeff_monthly(2)   ! recslot=2 => first half (per your routine)
+   !       else ! slot1 = current month, slot2 = next month (wrap within same file)
+   !          rec0 = max(1, min(maxrec, mmonth))
+   !          rec1 = rec0 + 1
+   !          if (rec1 > maxrec) rec1 = 1
+   !          call interp_coeff_monthly(1)   ! recslot=1 => second half
+   !       endif
+   !    elseif (trim(ocn_data_freq) == 'weekly') then
+   !       maxrec = days_per_year / 7
+   !       rec1   = int( real(yday-1,kind=dbl_kind) / 7._dbl_kind ) + 1
+   !       rec1   = max(1, min(maxrec, rec1))
+   !       rec0   = max(1, rec1-1)
+   !       call interp_coeff(rec1, 2, secday*7._dbl_kind, dataloc)
+   !    else ! default to daily
+   !       maxrec = days_per_year
+   !       rec1   = int(yday)
+   !       rec1   = max(1, min(maxrec, rec1))
+   !       rec0   = max(1, rec1-1)
+   !       call interp_coeff(rec1, 2, secday, dataloc)
+   !    endif
+   !    !---------------------------------------------------------------------
+   !    ! 3) Read only when needed (record changed since last call).
+   !    !    slot1 holds rec0, slot2 holds rec1.
+   !    !---------------------------------------------------------------------
+   !    need_read_slot1 = (rec0 /= last_rec_slot(1))
+   !    need_read_slot2 = (rec1 /= last_rec_slot(2))
+   !    if (need_read_slot1 .or. need_read_slot2) then
+   !       if (my_task == master_task) then
+   !          write(nu_diag,*) subname,' reading records rec0/rec1 = ', rec0, rec1
+   !          write(nu_diag,*) subname,' c1intp/c2intp = ', c1intp, c2intp
+   !          write(nu_diag,*) subname,' file = ', trim(F_AFIM)
+   !       endif
+   !       call ice_open_nc(F_AFIM, fid)
+   !       ! --- slot 1 (rec0) ---
+   !       if (need_read_slot1) then
+   !          call ice_read_nc(fid, rec0, 'sst', sst_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !          call ice_read_nc(fid, rec0, 'sss', sss_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !          call ice_read_nc(fid, rec0, 'u'  , uocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !          call ice_read_nc(fid, rec0, 'v'  , vocn_data(:,:,1,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !          last_rec_slot(1) = rec0
+   !       endif
+   !       ! --- slot 2 (rec1) ---
+   !       if (need_read_slot2) then
+   !          if (rec1 == rec0) then
+   !             ! avoid duplicate reads; just copy slot1 -> slot2
+   !             sst_data (:,:,2,:) = sst_data (:,:,1,:)
+   !             sss_data (:,:,2,:) = sss_data (:,:,1,:)
+   !             uocn_data(:,:,2,:) = uocn_data(:,:,1,:)
+   !             vocn_data(:,:,2,:) = vocn_data(:,:,1,:)
+   !          else
+   !             call ice_read_nc(fid, rec1, 'sst', sst_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !             call ice_read_nc(fid, rec1, 'sss', sss_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !             call ice_read_nc(fid, rec1, 'u'  , uocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !             call ice_read_nc(fid, rec1, 'v'  , vocn_data(:,:,2,:), debug_forcing, field_loc=field_loc_center, field_type=field_type_scalar)
+   !          endif
+   !          last_rec_slot(2) = rec1
+   !       endif
+   !       call ice_close_nc(fid)
+   !    endif
+   !    !---------------------------------------------------------------------
+   !    ! 4) Apply interpolation each timestep (NO nested OpenMP; no races)
+   !    !---------------------------------------------------------------------
+   !    !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(iblk,i,j,sst_tgt,sss_tgt,u_tgt,v_tgt)
+   !    do iblk = 1, nblocks
+   !       do j = 1, ny_block
+   !          do i = 1, nx_block
+   !             if (hm(i,j,iblk) == c0) then
+   !                sst (i,j,iblk) = c0
+   !                sss (i,j,iblk) = c0
+   !                uocn(i,j,iblk) = c0
+   !                vocn(i,j,iblk) = c0
+   !             else ! linear interpolation in time
+   !                sst_tgt = c1intp*sst_data (i,j,1,iblk) + c2intp*sst_data (i,j,2,iblk)
+   !                sss_tgt = c1intp*sss_data (i,j,1,iblk) + c2intp*sss_data (i,j,2,iblk)
+   !                u_tgt   = c1intp*uocn_data(i,j,1,iblk) + c2intp*uocn_data(i,j,2,iblk)
+   !                v_tgt   = c1intp*vocn_data(i,j,1,iblk) + c2intp*vocn_data(i,j,2,iblk)
+   !                ! restore SST if requested (do this every timestep for correct timescale)
+   !                if (restore_ocn) then
+   !                   sst(i,j,iblk) = sst(i,j,iblk) + (sst_tgt - sst(i,j,iblk)) * dt / trest
+   !                else
+   !                   sst(i,j,iblk) = sst_tgt
+   !                endif
+   !                ! direct forcing for SSS + currents (as in your current logic)
+   !                sss (i,j,iblk) = sss_tgt
+   !                uocn(i,j,iblk) = u_tgt
+   !                vocn(i,j,iblk) = v_tgt
+   !                ! clamps / sanity checks (retain your intent)
+   !                sst(i,j,iblk) = max(sst(i,j,iblk), Tf(i,j,iblk))
+   !                if (sst(i,j,iblk) > sst_thresh) sst(i,j,iblk) = sst_thresh
+   !                if (sss(i,j,iblk) > sss_high_thresh) sss(i,j,iblk) = sss_high_thresh
+   !                if (sss(i,j,iblk) < sss_low_thresh ) sss(i,j,iblk) = sss_low_thresh
+   !                if (abs(uocn(i,j,iblk)) > ispd_thresh) uocn(i,j,iblk) = c0
+   !                if (abs(vocn(i,j,iblk)) > ispd_thresh) vocn(i,j,iblk) = c0
+   !             endif
+   !          enddo
+   !       enddo
+   !    enddo
+   !    !$OMP END PARALLEL DO
+   !    call ocn_freezing_temperature
+   !    if (debug_forcing .or. local_debug) then
+   !       if (my_task == master_task) write(nu_diag,*) subname,' global min/max after update (rec0/rec1): ', rec0, rec1
+   !       vmin = global_minval(sst ,distrb_info,tmask)
+   !       vmax = global_maxval(sst ,distrb_info,tmask)
+   !       if (my_task == master_task) write(nu_diag,*) subname,'  sst ', vmin, vmax
+   !       vmin = global_minval(sss ,distrb_info,tmask)
+   !       vmax = global_maxval(sss ,distrb_info,tmask)
+   !       if (my_task == master_task) write(nu_diag,*) subname,'  sss ', vmin, vmax
+   !       vmin = global_minval(uocn,distrb_info,umask)
+   !       vmax = global_maxval(uocn,distrb_info,umask)
+   !       if (my_task == master_task) write(nu_diag,*) subname,'  uocn', vmin, vmax
+   !       vmin = global_minval(vocn,distrb_info,umask)
+   !       vmax = global_maxval(vocn,distrb_info,umask)
+   !       if (my_task == master_task) write(nu_diag,*) subname,'  vocn', vmin, vmax
+   !    endif
+   ! end subroutine AFIM_data
 
 !   !=======================================================================
 !   ! dpath2o, Feb.24
