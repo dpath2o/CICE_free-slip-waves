@@ -7,8 +7,8 @@
     sec_init             = 0
     istep0               = 0
     dt                   = 1800.0
-    npt_unit             = 'd'
-    npt                  = 3
+    npt_unit             = 'm'
+    npt                  = 12
     ndtd                 = 1
     runtype              = 'initial'
     ice_ic               = 'none'
@@ -78,7 +78,7 @@
     grid_type         = 'tripole'
     grid_ice          = 'B'
     grid_atm          = 'A'
-    grid_ocn          = 'B'
+    grid_ocn          = 'A'
     grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM2-025_grid.nc'
     kmt_type          = 'file'
     kmt_file          = '/g/data/gv90/da1339/grounded_icebergs/MyThin_db/kmt_mod_thinned-0p75_v1p50_iter0.nc'
@@ -160,8 +160,8 @@
 /
 
 &dynamics_nml
-    boundary_condition   = 'free_slip'
-    coastal_drag         = .true.
+    boundary_condition   = 'no_slip'
+    lateral_drag         = .false.
     Cs                   = 5e-4
     Cq                   = 1.5
     u_cap                = 0.0
@@ -300,7 +300,7 @@
     restart_coszen  = .false.
     restore_ice     = .false.
     restore_ocn     = .true.
-    trestore        =  1
+    trestore        = 48
     precip_units    = 'mks'
     default_season  = 'winter'
     atm_data_type   = 'ERA5'
@@ -318,7 +318,7 @@
     ice_data_conc   = 'default'
     ice_data_dist   = 'uniform'
     fyear_init      = 1993
-    ycycle          = 1
+    ycycle          = 31
     atm_data_format = 'nc'
     atm_data_dir    = '/g/data/gv90/da1339/afim_input/ERA5/0p25/'
     bgc_data_dir    = 'unknown_bgc_data_dir'

@@ -98,8 +98,8 @@
           atm_data_type,   atm_data_dir,  precip_units, rotate_wind, &
           atm_data_format, ocn_data_format, atm_data_version, &
           bgc_data_type, &
-          ocn_data_type, ocn_data_freq, ocn_data_dir, wave_spec_file,  &
-          hmix_0, T_T, T_S, a_0, p_w, &
+          ocn_data_type, ocn_data_dir, wave_spec_file,  &
+          hmix_0, &
           oceanmixed_file, restore_ocn, trestore, &
           ice_data_type, ice_data_conc, ice_data_dist, &
           snw_filename, &
@@ -295,14 +295,14 @@
         saltflux_option,ice_ref_salinity,cpl_frazil,    congel_freeze,  &
         oceanmixed_ice, restore_ice,     restore_ocn,   trestore,       &
         precip_units,   default_season,  wave_spec_type,nfreq,          &
-        atm_data_type,  ocn_data_type,   ocn_data_freq, bgc_data_type, fe_data_type,   &
+        atm_data_type,  ocn_data_type,   bgc_data_type, fe_data_type,   &
         ice_data_type,  ice_data_conc,   ice_data_dist,                 &
         fyear_init,     ycycle,          wave_spec_file,restart_coszen, &
         atm_data_dir,   ocn_data_dir,    bgc_data_dir,                  &
         atm_data_format, ocn_data_format, rotate_wind,                  &
         oceanmixed_file, atm_data_version,semi_implicit_Tsfc,           &
         vapor_flux_correction, &
-        hmix_0, T_T, T_S, a_0, p_w
+        hmix_0
 
       !-----------------------------------------------------------------
       ! default values
@@ -592,12 +592,7 @@
       ice_data_dist   = 'default' ! used by some tests to initialize ice state (distribution)
       bgc_data_dir    = 'unknown_bgc_data_dir'
       ocn_data_type   = 'default'
-      ocn_data_freq   = 'daily'
       hmix_0          = 60
-      T_T             = 1
-      T_S             = 1
-      a_0             = 0.15
-      p_w             = 1
       ocn_data_dir    = 'unknown_ocn_data_dir'
       oceanmixed_file = 'unknown_oceanmixed_file' ! ocean forcing data
       restore_ocn     = .false.   ! restore sst if true
@@ -1209,12 +1204,7 @@
       call broadcast_scalar(ice_data_dist,        master_task)
       call broadcast_scalar(bgc_data_dir,         master_task)
       call broadcast_scalar(ocn_data_type,        master_task)
-      call broadcast_scalar(ocn_data_freq,        master_task)
       call broadcast_scalar(hmix_0,               master_task)
-      call broadcast_scalar(T_T,                  master_task)
-      call broadcast_scalar(T_S,                  master_task)
-      call broadcast_scalar(a_0,                  master_task)
-      call broadcast_scalar(p_w,                  master_task)
       call broadcast_scalar(ocn_data_dir,         master_task)
       call broadcast_scalar(oceanmixed_file,      master_task)
       call broadcast_scalar(restore_ocn,          master_task)
@@ -2418,10 +2408,6 @@
             write(nu_diag,*) '     WARNING: will impact ocean forcing interaction'
             write(nu_diag,*) '     WARNING: coupled forcing will be modified by mixed layer routine'
             write(nu_diag,1002) '  hmix_0 = ', hmix_0
-            write(nu_diag,1002) '     T_T = ', T_T
-            write(nu_diag,1002) '     T_S = ', T_S
-            write(nu_diag,1002) '     a_0 = ', a_0
-            write(nu_diag,1002) '     p_w = ', p_w
          endif
          write(nu_diag,1030) ' saltflux_option  = ', trim(saltflux_option)
          if (trim(saltflux_option) == 'constant') then
@@ -2757,7 +2743,6 @@
             write(nu_diag,1031) ' ocn_data_dir     = ', trim(ocn_data_dir)
             write(nu_diag,1011) ' restore_ocn      = ', restore_ocn
          endif
-         write(nu_diag,1031) ' ocn_data_freq    = ', trim(ocn_data_freq)
          write(nu_diag,1011) ' restore_ice      = ', restore_ice
          if (restore_ice .or. restore_ocn) &
          write(nu_diag,1021) ' trestore         = ', trestore

@@ -1,5 +1,4 @@
 #!/bin/csh -f
-<<<<<<< HEAD
 #PBS -N free-slip
 #PBS -P gv90
 #PBS -q normalbw
@@ -19,86 +18,34 @@ module load openmpi/4.1.7
 module load netcdf/4.9.2
 
 #--------------------------------------------
-=======
 source /etc/profile.d/modules.csh
-
->>>>>>> refs/remotes/free/main
 cd /home/581/da1339/AFIM/src/CICE_free-slip/free-slip
 source ./cice.settings || exit 2
 source ./env.${ICE_MACHCOMP} || exit 2
 
 echo " "
 echo "${0}:"
-<<<<<<< HEAD
-
-=======
->>>>>>> refs/remotes/free/main
 set stamp = `date '+%y%m%d-%H%M%S'`
 set ICE_RUNLOG_FILE = "cice.runlog.${stamp}"
 
 #--------------------------------------------
 ./setup_run_dirs.csh
-<<<<<<< HEAD
-
 #--------------------------------------------
-=======
->>>>>>> refs/remotes/free/main
 cd ${ICE_RUNDIR}
 
 setenv OMP_NUM_THREADS ${ICE_NTHRDS}
 setenv OMP_SCHEDULE "${ICE_OMPSCHED}"
-<<<<<<< HEAD
-
 cp -f ${ICE_CASEDIR}/ice_in ${ICE_RUNDIR}
 cp -f ${ICE_CASEDIR}/env.gadi1_intel ${ICE_RUNDIR}
 cp -f ${ICE_CASEDIR}/cice.settings ${ICE_RUNDIR}
-
 set diagtype = `grep -i diag_type ${ICE_CASEDIR}/ice_in | grep -i stdout | wc -l`
 set diagfile = `grep -i diag_file ${ICE_CASEDIR}/ice_in | sed -e "s/.* = '\(.*\)'/\1/"`
-
 echo " "
 echo "CICE case directory is ${ICE_CASEDIR}"
 echo "CICE rundir is ${ICE_RUNDIR}"
 echo "CICE log file is ${ICE_RUNLOG_FILE}"
 echo "CICE run started : `date`"
-
 mpirun -np 1232 ./cice >&! $ICE_RUNLOG_FILE
-=======
-setenv OMP_STACKSIZE 64M
-ulimit -c unlimited
-
-cp -f ${ICE_CASEDIR}/ice_in ${ICE_RUNDIR}
-
-# MPI / UCX noise control + disable hcoll (matches your intent)
-unsetenv OMPI_MCA_btl_base_verbose
-setenv OMPI_MCA_coll_hcoll_enable 0
-setenv OMPI_MCA_coll "^hcoll"
-setenv UCX_WARN_UNUSED_ENV_VARS n
-
-echo "CICE case directory is ${ICE_CASEDIR}"         >!  $ICE_RUNLOG_FILE
-echo "CICE rundir is ${ICE_RUNDIR}"                  >> $ICE_RUNLOG_FILE
-echo "CICE run started : `date`"                     >> $ICE_RUNLOG_FILE
-echo "PBS_NCPUS=$PBS_NCPUS  PBS_NODEFILE=$PBS_NODEFILE" >> $ICE_RUNLOG_FILE
-
-echo "MODULE LIST:"                                  >> $ICE_RUNLOG_FILE
-module list                                          >> $ICE_RUNLOG_FILE
-
-echo "mpirun: `which mpirun`"                        >> $ICE_RUNLOG_FILE
-mpirun --version | head -n 2                         >> $ICE_RUNLOG_FILE
-
-which mpirun >& /dev/null
-if ( $status != 0 ) then
-  echo "ERROR: mpirun not found." >> $ICE_RUNLOG_FILE
-  exit 2
-endif
-
-echo "MPI libs linked into ./cice:"                  >> $ICE_RUNLOG_FILE
-ldd ./cice | egrep -i 'libmpi|openmpi|mpich|impi|mpt' >> $ICE_RUNLOG_FILE
-
-echo "Running: mpirun -np $PBS_NCPUS --hostfile $PBS_NODEFILE ./cice" >> $ICE_RUNLOG_FILE
-mpirun -np $PBS_NCPUS --hostfile $PBS_NODEFILE ./cice >>& $ICE_RUNLOG_FILE
->>>>>>> refs/remotes/free/main
-
 echo "CICE run finished: `date`"
 echo " "
 

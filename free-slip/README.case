@@ -745,3 +745,19 @@ Thu Jan 22 05:14:39 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/A
 Thu Jan 22 05:38:50 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260122-053811
 Thu Jan 22 05:40:34 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.260122-053932
 >>>>>>> refs/remotes/free/main
+Tue Jan 27 14:28:33 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260127-142747
+Tue Jan 27 14:32:14 AEDT 2026 ./cice.submit: free-slip job submitted
+Tue Jan 27 14:33:19 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159358474.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.260127-143302
+Tue Jan 27 14:33:19 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159358474.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Tue Jan 27 14:33:20 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159358474.gadi-pbs.SC: CICE run completed successfully
+Tue Jan 27 14:40:53 AEDT 2026 ./cice.submit: free-slip job submitted
+Tue Jan 27 17:27:43 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159360211.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.260127-144224
+Tue Jan 27 17:27:43 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159360211.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Tue Jan 27 17:27:44 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159360211.gadi-pbs.SC: CICE run completed successfully
+Wed Jan 28 05:54:17 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260128-055355
+Wed Jan 28 05:55:46 AEDT 2026 ./cice.submit: free-slip job submitted
+Wed Jan 28 07:00:21 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260128-070002
+Wed Jan 28 07:00:31 AEDT 2026 ./cice.submit: free-slip job submitted
+Wed Jan 28 07:21:40 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260128-072121
+Wed Jan 28 07:21:48 AEDT 2026 ./cice.submit: free-slip job submitted
+Wed Jan 28 07:29:19 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260128-072901
