@@ -1097,6 +1097,8 @@
                              field_loc, field_type, restart_ext)
 
       use ice_gather_scatter, only: scatter_global, scatter_global_ext
+      ! dpath2o edit
+      use, intrinsic :: ieee_arithmetic, only: ieee_is_nan
 
       integer (kind=int_kind), intent(in) :: &
          fid           , & ! file id
@@ -1145,6 +1147,8 @@
       integer (kind=int_kind) :: nx, ny
 
       integer (kind=int_kind) :: lnrec       ! local value of nrec
+
+      integer (kind=int_kind) :: ii, jj, kk  ! dpath2o edit
 
       lnrec = nrec
 
@@ -1227,7 +1231,9 @@
 !         write(nu_diag,*) subname,' missingvalue= ',missingvalue
          allocate(mask(nx,ny))
          if ( ieee_is_nan(missingvalue) ) then
-            mask = ieee_is_nan(work_g1)
+            !mask = ieee_is_nan(work_g1)
+            ! dpath2o edit
+            mask = .not. ieee_is_nan(work_g1)
          else
             mask = work_g1 /= missingvalue
          endif
@@ -1259,8 +1265,20 @@
 
       deallocate(work_g1)
 
+      ! dpath2o edit
 ! echmod:  this should not be necessary if fill/missing are only on land
-      where (work > 1.0e+30_dbl_kind) work = c0
+      ! where (work > 1.0e+30_dbl_kind) work = c0
+      do kk = 1, size(work,3)
+         do jj = 1, size(work,2)
+            do ii = 1, size(work,1)
+               if (work(ii,jj,kk) > 1.0e+30_dbl_kind) then
+                  work(ii,jj,kk) = c0
+               elseif (work(ii,jj,kk) /= work(ii,jj,kk)) then
+                  work(ii,jj,kk) = c0
+               endif
+            enddo
+         enddo
+      enddo
 
 #else
       work = c0 ! to satisfy intent(out) attribute
