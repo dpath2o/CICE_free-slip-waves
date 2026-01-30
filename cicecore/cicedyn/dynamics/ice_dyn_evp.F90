@@ -134,8 +134,8 @@
       use ice_grid, only: grid_ice, dyT, dxT, uarear, tmask, G_HTE, G_HTN, dxN, dyE, &
          load_F2_form_factors
       use ice_calendar, only: dt_dyn
-      use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, &
-         iceEmask, iceNmask, lateral_drag
+      use ice_dyn_shared, only: init_dyn_shared, evp_algorithm, iceEmask, iceNmask, &
+         lateral_drag
       use ice_dyn_evp1d, only: dyn_evp1d_init
 
 !allocate c and cd grid var. Follow structucre of eap

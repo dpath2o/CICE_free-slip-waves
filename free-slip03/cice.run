@@ -1,27 +1,41 @@
 #!/bin/csh -f
-# if ( ! $?MODULESHOME ) then
-#   if ( -f /etc/profile.d/modules.csh ) then
-#     source /etc/profile.d/modules.csh
-#   else if ( -f /usr/share/Modules/init/csh ) then
-#     source /usr/share/Modules/init/csh
-#   endif
-# endif
+#PBS -N free-slip03
+#PBS -P gv90
+#PBS -q normalbw
+#PBS -l walltime=06:00:00
+#PBS -l ncpus=1232
+#PBS -l mem=700GB
+#PBS -l storage=gdata/gv90+gdata/xp65
+#PBS -l wd
+#PBS -j oe
+#PBS -W umask=022
+
+# Initialize module system
+source /opt/Modules/v4.3.0/init/csh
+module purge
+module load intel-compiler-llvm/2024.2.1
+module load openmpi/4.1.7
+module load netcdf/4.9.2
+
 #--------------------------------------------
+source /etc/profile.d/modules.csh
 cd /home/581/da1339/AFIM/src/CICE_free-slip/free-slip03
 source ./cice.settings || exit 2
 source ./env.${ICE_MACHCOMP} || exit 2
+
 echo " "
 echo "${0}:"
-set  stamp   = `date '+%y%m%d-%H%M%S'`
+set stamp = `date '+%y%m%d-%H%M%S'`
 set ICE_RUNLOG_FILE = "cice.runlog.${stamp}"
+
 #--------------------------------------------
 ./setup_run_dirs.csh
 #--------------------------------------------
 cd ${ICE_RUNDIR}
+
 setenv OMP_NUM_THREADS ${ICE_NTHRDS}
 setenv OMP_SCHEDULE "${ICE_OMPSCHED}"
 cp -f ${ICE_CASEDIR}/ice_in ${ICE_RUNDIR}
-echo "domain_nml in ICE_RUNDIR ice_in:" ; grep -n "domain_nml\|nprocs" ${ICE_RUNDIR}/ice_in | head
 cp -f ${ICE_CASEDIR}/env.gadi1_intel ${ICE_RUNDIR}
 cp -f ${ICE_CASEDIR}/cice.settings ${ICE_RUNDIR}
 set diagtype = `grep -i diag_type ${ICE_CASEDIR}/ice_in | grep -i stdout | wc -l`
@@ -31,48 +45,40 @@ echo "CICE case directory is ${ICE_CASEDIR}"
 echo "CICE rundir is ${ICE_RUNDIR}"
 echo "CICE log file is ${ICE_RUNLOG_FILE}"
 echo "CICE run started : `date`"
-setenv OMP_STACKSIZE 64M
-ulimit -s unlimited
-echo "CICE running on $PBS_NCPUS CPUs"
-echo "Running: mpirun -np $PBS_NCPUS ./cice" >> $ICE_RUNLOG_FILE
-setenv OMPI_MCA_btl_base_verbose 100
-echo "mpirun: `which mpirun`"
-mpirun --version | head -n 2
-echo "MPI libraries linked into ./cice:"
-ldd ./cice | egrep -i 'libmpi|openmpi|mpich|impi|mpt' || echo "NO libmpi found"
-/apps/openmpi/4.1.7/bin/mpirun -np $PBS_NCPUS --hostfile $PBS_NODEFILE ./cice >&! $ICE_RUNLOG_FILE
+mpirun -np 1232 ./cice >&! $ICE_RUNLOG_FILE
 echo "CICE run finished: `date`"
 echo " "
 
 #--------------------------------------------
 if !(-d ${ICE_LOGDIR}) mkdir -p ${ICE_LOGDIR}
+
 set checkfile = ${ICE_RUNLOG_FILE}
 cp -p ${ICE_RUNLOG_FILE} ${ICE_LOGDIR}
 echo "CICE output file is ${ICE_LOGDIR}/${ICE_RUNLOG_FILE}"
 echo "`date` ${0}: CICE output file is ${ICE_LOGDIR}/${ICE_RUNLOG_FILE}" >> ${ICE_CASEDIR}/README.case
+
 if ( ${diagtype} == 0) then
   set checkfile = ${diagfile}
   cp -p ${diagfile} ${ICE_LOGDIR}
   echo "CICE output file is ${ICE_LOGDIR}/${diagfile}"
   echo "`date` ${0}: CICE output file is ${ICE_LOGDIR}/${diagfile}" >> ${ICE_CASEDIR}/README.case
 endif
+
 grep ' CICE COMPLETED SUCCESSFULLY' ${checkfile}
 if ( $status == 0 ) then
   echo "CICE run completed successfully"
-  echo "`date` ${0}: CICE run completed successfully"  >> ${ICE_CASEDIR}/README.case
+  echo "`date` ${0}: CICE run completed successfully" >> ${ICE_CASEDIR}/README.case
 else
   grep 'COMPLETED SUCCESSFULLY' ${checkfile}
   if ( $status == 0 ) then
     echo "Run completed successfully"
-    echo "`date` ${0}: Run completed successfully"  >> ${ICE_CASEDIR}/README.case
+    echo "`date` ${0}: Run completed successfully" >> ${ICE_CASEDIR}/README.case
   else
     echo "Run did NOT complete"
-    echo "`date` ${0}: CICE run did NOT complete"  >> ${ICE_CASEDIR}/README.case
+    echo "`date` ${0}: CICE run did NOT complete" >> ${ICE_CASEDIR}/README.case
     exit -1
   endif
 endif
-if ( ${diagtype} == 0) then
-  exit -1
-endif
+
 echo "done ${0}"
 

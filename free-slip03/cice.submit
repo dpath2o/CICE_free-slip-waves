@@ -1,22 +1,4 @@
 #!/bin/csh -f
-#PBS -q normalbw
-#PBS -P gv90
-#PBS -N free-slip03
-#PBS -l storage=gdata/gv90+scratch/gv90+gdata/ik11+gdata/xp65
-#PBS -l ncpus=1232
-#PBS -l mem=700GB
-#PBS -l walltime=6:00:00
-#PBS -j oe
-#PBS -W umask=003
-#PBS -l wd
 
-# initialise environment modules for bash
-module purge
-module load openmpi/4.1.7
-module load intel-compiler
-module load netcdf
-
-# Run
-./cice.run $PBS_NCPUS
-
-
+qsub ./cice.run
+echo "`date` ${0}: free-slip job submitted" >> ${PWD}/README.case
