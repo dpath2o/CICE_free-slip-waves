@@ -238,6 +238,22 @@
          stat=ierr)
       if (ierr/=0) call abort_ice(subname//': Out of memory')
 
+      !---------------------------------------------------------
+      ! Allocate and initialise lateral drag coefficient fields
+      !---------------------------------------------------------
+      allocate( &
+               KuU  (nx_block,ny_block,max_blocks), &
+               KuE  (nx_block,ny_block,max_blocks), &
+               KuN  (nx_block,ny_block,max_blocks), &
+               KuxU (nx_block,ny_block,max_blocks), &
+               KuyU (nx_block,ny_block,max_blocks), &
+               KuxE (nx_block,ny_block,max_blocks), &
+               KuyE (nx_block,ny_block,max_blocks), &
+               KuxN (nx_block,ny_block,max_blocks), &
+               KuyN (nx_block,ny_block,max_blocks), &
+               stat=ierr)
+      if (ierr/=0) call abort_ice(subname//': Out of memory')
+
       if (grid_ice == 'B' .and. evp_algorithm == "standard_2d") then
          allocate( &
             dxhy(nx_block,ny_block,max_blocks), & ! 0.5*(HTE - HTW)
@@ -257,21 +273,6 @@
             fcorE_blk  (nx_block,ny_block,max_blocks), & ! Coriolis
             fcorN_blk  (nx_block,ny_block,max_blocks), & ! Coriolis
             stat=ierr)
-         if (ierr/=0) call abort_ice(subname//': Out of memory')
-         !---------------------------------------------------------
-         ! Allocate and initialise lateral drag coefficient fields
-         !---------------------------------------------------------
-         allocate( &
-                  KuU  (nx_block,ny_block,max_blocks), &
-                  KuE  (nx_block,ny_block,max_blocks), &
-                  KuN  (nx_block,ny_block,max_blocks), &
-                  KuxU (nx_block,ny_block,max_blocks), &
-                  KuyU (nx_block,ny_block,max_blocks), &
-                  KuxE (nx_block,ny_block,max_blocks), &
-                  KuyE (nx_block,ny_block,max_blocks), &
-                  KuxN (nx_block,ny_block,max_blocks), &
-                  KuyN (nx_block,ny_block,max_blocks), &
-                  stat=ierr)
          if (ierr/=0) call abort_ice(subname//': Out of memory')  
       end if
 
