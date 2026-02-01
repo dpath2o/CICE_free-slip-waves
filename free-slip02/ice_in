@@ -32,7 +32,7 @@
     dumpfreq_base        = 'init','init','init','init','init'
     dump_last            = .false.
     bfbflag              = 'off'
-    diagfreq             = 12
+    diagfreq             = 24
     diag_type            = 'file'
     diag_file            = 'ice_diag.d'
     debug_model          = .false.
@@ -76,12 +76,12 @@
 &grid_nml
     grid_format       = 'nc'
     grid_type         = 'tripole'
-    grid_ice          = 'B'
+    grid_ice          = 'C'
     grid_atm          = 'A'
     grid_ocn          = 'A'
-    grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM2-025_grid.nc'
+    grid_file         = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_Cgrid.nc'
     kmt_type          = 'file'
-    kmt_file          = '/g/data/gv90/da1339/grounded_icebergs/MyThin_db/kmt_mod_thinned-0p75_v1p50_iter0.nc'
+    kmt_file          = '/g/data/gv90/da1339/grids/ACCESS-OM3-025_kmt.nc'
     bathymetry_file   = 'unknown_bathymetry_file'
     bathymetry_format = 'default'
     use_bathymetry    = .false.
@@ -160,13 +160,6 @@
 /
 
 &dynamics_nml
-    boundary_condition   = 'no_slip'
-    lateral_drag         = .false.
-    Cs                   = 5e-4
-    Cq                   = 1.5
-    u_cap                = 0.0
-    C_L                  = 0.0
-    u0                   = 5e-5
     kdyn                 = 1
     ndte                 = 240
     revised_evp          = .false.
@@ -195,6 +188,14 @@
     k2                   = 15.
     alphab               = 20.
     threshold_hw         = 30.
+    boundary_condition   = 'free_slip'
+    lateral_drag         = .true.
+    form_func            = 'quad'
+    Cs                   = 5e-4
+    Cq                   = 1.5
+    u_cap                = 0.0
+    C_L                  = 0.0
+    u0                   = 5e-5
     coriolis             = 'latitude'
     kridge               = 1
     ktransport           = 1
@@ -300,7 +301,7 @@
     restart_coszen  = .false.
     restore_ice     = .false.
     restore_ocn     = .true.
-    trestore        = 7
+    trestore        = 14
     precip_units    = 'mks'
     default_season  = 'winter'
     atm_data_type   = 'ERA5'
@@ -607,14 +608,14 @@
     f_strinty      = 'd'
     f_taubx        = 'x'
     f_tauby        = 'x'
-    f_KuxN         = 'x'
-    f_KuyN         = 'x'
-    f_KuxE         = 'x'
-    f_KuyE         = 'x'
-    f_Kux          = 'x'
-    f_Kuy          = 'x'
-    f_F2N          = 'x'
-    f_F2E          = 'x'
+    f_KuxN         = 'd'
+    f_KuyN         = 'd'
+    f_KuxE         = 'd'
+    f_KuyE         = 'd'
+    f_Kux          = 'd'
+    f_Kuy          = 'd'
+    f_F2N          = 'd'
+    f_F2E          = 'd'
     f_strength     = 'd'
     f_divu         = 'd'
     f_shear        = 'd'

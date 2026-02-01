@@ -1004,7 +1004,7 @@
             case ('sum')
                static_switch   = c1
                quad_switch     = c1
-               linear_switch   = merge(c1, c0, C_L > 0.0d0)   ! your requested behavior
+               linear_switch   = merge(c1, c0, C_L > 0.0d0) 
             case ('sum_quad_cap')
                static_switch   = c1
                quad_cap_switch = c1

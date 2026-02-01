@@ -424,10 +424,10 @@
       ! DYNAMICS
       boundary_condition    = 'no_slip'       ! 'no_slip' (Dirchlet) or 'free_slip' (Neumann); boundary conditions
       lateral_drag          = .false.         ! if true, enable lateral drag parameterisation for landfast ice
-      form_func             = 'static'        ! 'static', 'quad', 'sum', 'linear'
+      form_func             = 'static'        ! 'static', 'quad', 'sum', 'linear', 'quad_cap', 'sum_quad_cap'
       Cs                    = 1.0e-4_dbl_kind ! see Liu et al. (2022) section 3.3
       Cq                    = 1.0_dbl_kind    ! see Liu et al. (2022) section 3.3
-      u_cap                 = 0.0_dbl_kind    
+      u_cap                 = 0.0_dbl_kind    ! 
       C_L                   = 0.0_dbl_kind    ! linear form function scaling coeficient (unitless)
       u0                    = 5.0e-4_dbl_kind ! see Lemieux et al. (2015) section 6
       kdyn                  = 1               ! type of dynamics (-1, 0 = off, 1 = evp, 2 = eap, 3 = vp)
