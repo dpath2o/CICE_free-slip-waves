@@ -160,13 +160,6 @@
 /
 
 &dynamics_nml
-    boundary_condition   = 'free_slip'
-    lateral_drag         = .false.
-    Cs                   = 5e-4
-    Cq                   = 1.5
-    u_cap                = 0.0
-    C_L                  = 0.0
-    u0                   = 5e-5
     kdyn                 = 1
     ndte                 = 240
     revised_evp          = .false.
@@ -195,6 +188,14 @@
     k2                   = 15.
     alphab               = 20.
     threshold_hw         = 30.
+    boundary_condition   = 'free_slip'
+    lateral_drag         = .true.
+    form_func            = 'sum'
+    Cs                   = 3e-4
+    Cq                   = 1.5
+    u_cap                = 0.0
+    C_L                  = 1.0
+    u0                   = 5e-5
     coriolis             = 'latitude'
     kridge               = 1
     ktransport           = 1
@@ -541,8 +542,8 @@
     f_snow_ai      = 'm'
     f_rain         = 'x'
     f_rain_ai      = 'm'
-    f_sst          = 'm'
-    f_sss          = 'm'
+    f_sst          = 'd'
+    f_sss          = 'd'
     f_uocn         = 'd'
     f_vocn         = 'd'
     f_frzmlt       = 'm'
