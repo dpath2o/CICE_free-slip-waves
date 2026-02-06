@@ -1,4 +1,4 @@
-#!/bin/csh -f
+#!/bin/bash
 #PBS -N free-slip
 #PBS -P gv90
 #PBS -q normalbw
@@ -9,241 +9,158 @@
 #PBS -l wd
 #PBS -j oe
 #PBS -W umask=022
+set -euo pipefail
 
-# ============================================================
-# AFIM auto-chunking: detect init vs restart and set ONLY:
-#   runtype, use_restart_time
-# Also capture seg_start from restart filename (or START_DATE).
-# ============================================================
+# ---------------------------
+# Required inputs via qsub -v
+# ---------------------------
+: "${SIM_NAME:?must be set (qsub -v SIM_NAME=...)}"
+: "${START_DATE:?must be set (qsub -v START_DATE=YYYY-MM-DD)}"
+: "${END_DATE:?must be set (qsub -v END_DATE=YYYY-MM-DD)}"
 
-if ( ! $?CASE_NAME ) then
-  set CASE_NAME = `basename "$PBS_O_WORKDIR"`
-endif
-if ( ! $?SIM_NAME ) then
-  echo "ERROR: SIM_NAME not set. Submit with: qsub -V ./cice.run (from submit_and_archive.csh)"
-  exit 2
-endif
-if ( ! $?START_DATE ) set START_DATE = ""
-if ( ! $?END_DATE ) then
-  echo "ERROR: END_DATE not set."
-  exit 2
-endif
+CASE_NAME="${CASE_NAME:-$(basename "${PBS_O_WORKDIR:-$PWD}")}"
 
-set RUNROOT = "$HOME/CICE_runs/$CASE_NAME"
-set RSTDIR  = "$RUNROOT/restart"
-set HSTDIR  = "$RUNROOT/history"
-set PTRFILE = "$RUNROOT/ice.restart_file"
+ICE_RUNDIR="${ICE_RUNDIR:-$HOME/CICE_runs/$CASE_NAME}"
+ARCHROOT="$HOME/AFIM_archive/$SIM_NAME"
+HIST_ARCH="$ARCHROOT/history/daily"
 
-# Find ice_in to edit (prefer the run directory copy)
-set ICEIN = "$RUNROOT/ice_in"
-if ( ! -f "$ICEIN" ) set ICEIN = "$PBS_O_WORKDIR/ice_in"
-if ( ! -f "$ICEIN" ) then
-  echo "ERROR: cannot find ice_in in $RUNROOT or $PBS_O_WORKDIR"
-  exit 2
-endif
+STATUS_FILE="$ARCHROOT/cice_chain_status.txt"
+DONE_FLAG="$ARCHROOT/cice_chain_DONE_${START_DATE}_${END_DATE}.flag"
+CRASH_FLAG="$ARCHROOT/cice_chain_CRASH_${START_DATE}_${END_DATE}.flag"
 
-# Do we have any restart files present?
-/bin/ls -1 $RSTDIR/iced.*-00000.nc >& /dev/null
-set HAVE_ANY_RST = $status
+ICE_IN="$ICE_RUNDIR/ice_in"
+RESTART_DIR="$ICE_RUNDIR/restart"
+RESTART_PTR="$ICE_RUNDIR/ice.restart_file"
 
-set seg_start = "$START_DATE"
+log() {
+  echo "$(date '+%F %T') [CASE=$CASE_NAME SIM=$SIM_NAME JOB=$PBS_JOBID] $*" | tee -a "$STATUS_FILE"
+}
 
-if ( -f "$PTRFILE" || $HAVE_ANY_RST == 0 ) then
-  # If either pointer exists OR restart files exist, we treat this as a restart-intended state.
-  if ( ! -f "$PTRFILE" ) then
-    echo "ERROR: restart files exist in $RSTDIR but missing pointer file $PTRFILE"
-    exit 3
-  endif
+mkdir -p "$HIST_ARCH" "$ARCHROOT"
 
-  set ptr_line = `cat "$PTRFILE" | tr -d ' \r\n'`
-  set ptr_base = `basename "$ptr_line"`
-  if ( ! -f "$RSTDIR/$ptr_base" ) then
-    echo "ERROR: $PTRFILE points to $ptr_base but file not found in $RSTDIR"
-    exit 3
-  endif
+log "START chunk. ICE_RUNDIR=$ICE_RUNDIR"
 
-  # Extract segment start date from the restart filename iced.YYYY-MM-DD-00000.nc
-  set seg_start = `echo "$ptr_base" | sed -n 's/^iced\.\([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\)-00000\.nc$/\1/p'`
-  if ( "$seg_start" == "" ) then
-    echo "ERROR: could not parse date from restart filename: $ptr_base"
-    exit 3
-  endif
+# ------------------------------------------------------------
+# Decide initial vs continue, and enforce ice_in consistency
+# ------------------------------------------------------------
+mode="initial"
 
-  # Set ONLY runtype/use_restart_time for continue
-  perl -pi -e "s/^(\\s*runtype\\s*=\\s*).*/\\1'continue'/i" "$ICEIN"
-  perl -pi -e "s/^(\\s*use_restart_time\\s*=\\s*).*/\\1.true./i" "$ICEIN"
-else
-  # No pointer and no restart files: initialise
-  if ( "$START_DATE" == "" ) then
-    echo "WARNING: START_DATE not provided; seg_start will be unknown for analysis wrappers."
-    set seg_start = "UNKNOWN"
-  endif
-
-  perl -pi -e "s/^(\\s*runtype\\s*=\\s*).*/\\1'initial'/i" "$ICEIN"
-  perl -pi -e "s/^(\\s*use_restart_time\\s*=\\s*).*/\\1.false./i" "$ICEIN"
-endif
-
-echo "`date` AFIM: CASE=$CASE_NAME SIM=$SIM_NAME seg_start=$seg_start END_DATE=$END_DATE"
-echo "`date` AFIM: using ice_in at $ICEIN"
-
-# Initialize module system
-source /opt/Modules/v4.3.0/init/csh
-module purge
-module load intel-compiler-llvm/2024.2.1
-module load openmpi/4.1.7
-module load netcdf/4.9.2
-
-#--------------------------------------------
-source /etc/profile.d/modules.csh
-cd /home/581/da1339/AFIM/src/CICE_free-slip/free-slip
-source ./cice.settings || exit 2
-source ./env.${ICE_MACHCOMP} || exit 2
-
-echo " "
-echo "${0}:"
-set stamp = `date '+%y%m%d-%H%M%S'`
-set ICE_RUNLOG_FILE = "cice.runlog.${stamp}"
-
-#--------------------------------------------
-./setup_run_dirs.csh
-#--------------------------------------------
-cd ${ICE_RUNDIR}
-
-setenv OMP_NUM_THREADS ${ICE_NTHRDS}
-setenv OMP_SCHEDULE "${ICE_OMPSCHED}"
-cp -f ${ICE_CASEDIR}/ice_in ${ICE_RUNDIR}
-cp -f ${ICE_CASEDIR}/env.gadi1_intel ${ICE_RUNDIR}
-cp -f ${ICE_CASEDIR}/cice.settings ${ICE_RUNDIR}
-set diagtype = `grep -i diag_type ${ICE_CASEDIR}/ice_in | grep -i stdout | wc -l`
-set diagfile = `grep -i diag_file ${ICE_CASEDIR}/ice_in | sed -e "s/.* = '\(.*\)'/\1/"`
-echo " "
-echo "CICE case directory is ${ICE_CASEDIR}"
-echo "CICE rundir is ${ICE_RUNDIR}"
-echo "CICE log file is ${ICE_RUNLOG_FILE}"
-echo "CICE run started : `date`"
-mpirun -np 1232 ./cice >&! $ICE_RUNLOG_FILE
-echo "CICE run finished: `date`"
-echo " "
-
-# ============================================================
-# AFIM post-run: detect crash, archive, submit analysis,
-# then chain next chunk until END_DATE reached.
-# ============================================================
-
-set CICE_STATUS = $status
-if ( $CICE_STATUS != 0 ) then
-  echo "`date` AFIM: CICE exited non-zero (status=$CICE_STATUS). Not chaining further."
-  exit $CICE_STATUS
-endif
-
-# Latest restart after the run (this is the *next* start time)
-set latest_rst = `/bin/ls -1t $RSTDIR/iced.*-00000.nc 2>/dev/null | head -1`
-if ( "$latest_rst" == "" ) then
-  echo "`date` AFIM: ERROR: run finished but no restart file found in $RSTDIR (treating as crash)."
-  exit 4
-endif
-
-set next_start = `echo "$latest_rst" | sed -n 's/.*iced\.\([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\)-00000\.nc$/\1/p'`
-if ( "$next_start" == "" ) then
-  echo "`date` AFIM: ERROR: could not parse date from latest restart: $latest_rst"
-  exit 4
-endif
-
-# seg_end = next_start - 1 day (for analysis wrappers)
-set seg_end = `python - <<PY
-from datetime import datetime, timedelta
-d=datetime.strptime("$next_start","%Y-%m-%d")-timedelta(days=1)
-print(d.strftime("%Y-%m-%d"))
-PY`
-
-# ---- Archive paths ----
-set ARCH = "$HOME/AFIM_archive/$SIM_NAME"
-mkdir -p "$ARCH/history/daily"
-
-# Move daily history out of the run dir
-if ( -d "$HSTDIR" ) then
-  mv "$HSTDIR"/iceh.* "$ARCH/history/daily/" >& /dev/null
-endif
-
-# Preserve key run-control artifacts (COPY to avoid breaking restarts)
-foreach f ( ice_in ice_diag.d ice.restart_file )
-  if ( -f "$RUNROOT/$f" ) cp -p "$RUNROOT/$f" "$ARCH/" >& /dev/null
-end
-
-# Move run logs
-mv "$RUNROOT"/cice.runlog.* "$ARCH/" >& /dev/null
-
-# Copy latest restart to archive; keep it in-place for the next chunk
-cp -p "$latest_rst" "$ARCH/" >& /dev/null
-
-# Prune older restarts but keep the latest one for continuation
-foreach f ( `/bin/ls -1 $RSTDIR/iced.*-00000.nc 2>/dev/null` )
-  if ( "$f" != "$latest_rst" ) rm -f "$f"
-end
-
-# PBS stdout/stderr (job name dependent); archive if present in case dir
-mv "$PBS_O_WORKDIR"/free-slip.o* "$ARCH/" >& /dev/null
-
-# ---- Submit analysis (segment range) ----
-# Only run if seg_start is known
-if ( "$seg_start" != "UNKNOWN" ) then
-  cd "$HOME/AFIM/src/AFIM/scripts/classification"
-  ./classify_sea_ice_pbs_wrapper.sh -s "$SIM_NAME" -i FI -g Tc -S "$seg_start" -E "$seg_end" -z -y -k
-
-  cd "$HOME/AFIM/src/AFIM/scripts/metrics"
-  ./metrics_pbs_wrapper.sh -s "$SIM_NAME" -i FI -g Tc -S "$seg_start" -E "$seg_end" -z -p
-
-  tail "$HOME/logs/metrics_${SIM_NAME}_ispd_thresh0.0005.log" | tail -n 30
-else
-  echo "`date` AFIM: seg_start unknown; skipping analysis wrapper submission."
-endif
-
-# ---- Decide whether to chain ----
-set NEED_MORE = `python - <<PY
-# chain if next_start <= END_DATE (YYYY-MM-DD lexical compare is valid)
-ns="$next_start"
-ed="$END_DATE"
-print("1" if ns <= ed else "0")
-PY`
-
-if ( "$NEED_MORE" == "1" ) then
-  echo "`date` AFIM: chaining next chunk (next_start=$next_start <= END_DATE=$END_DATE)"
-  # Re-submit same cice.run but only after THIS job completes successfully
-  qsub -V -W depend=afterok:${PBS_JOBID} "$PBS_O_WORKDIR/cice.run"
-else
-  echo "`date` AFIM: reached END_DATE. next_start=$next_start > END_DATE=$END_DATE. Stopping chain."
-endif
-
-#--------------------------------------------
-if !(-d ${ICE_LOGDIR}) mkdir -p ${ICE_LOGDIR}
-
-set checkfile = ${ICE_RUNLOG_FILE}
-cp -p ${ICE_RUNLOG_FILE} ${ICE_LOGDIR}
-echo "CICE output file is ${ICE_LOGDIR}/${ICE_RUNLOG_FILE}"
-echo "`date` ${0}: CICE output file is ${ICE_LOGDIR}/${ICE_RUNLOG_FILE}" >> ${ICE_CASEDIR}/README.case
-
-if ( ${diagtype} == 0) then
-  set checkfile = ${diagfile}
-  cp -p ${diagfile} ${ICE_LOGDIR}
-  echo "CICE output file is ${ICE_LOGDIR}/${diagfile}"
-  echo "`date` ${0}: CICE output file is ${ICE_LOGDIR}/${diagfile}" >> ${ICE_CASEDIR}/README.case
-endif
-
-grep ' CICE COMPLETED SUCCESSFULLY' ${checkfile}
-if ( $status == 0 ) then
-  echo "CICE run completed successfully"
-  echo "`date` ${0}: CICE run completed successfully" >> ${ICE_CASEDIR}/README.case
-else
-  grep 'COMPLETED SUCCESSFULLY' ${checkfile}
-  if ( $status == 0 ) then
-    echo "Run completed successfully"
-    echo "`date` ${0}: Run completed successfully" >> ${ICE_CASEDIR}/README.case
+if [[ -s "$RESTART_PTR" ]]; then
+  rst_name="$(head -n 1 "$RESTART_PTR" | tr -d '[:space:]')"
+  if [[ -n "$rst_name" && -f "$RESTART_DIR/$rst_name" ]]; then
+    mode="continue"
   else
-    echo "Run did NOT complete"
-    echo "`date` ${0}: CICE run did NOT complete" >> ${ICE_CASEDIR}/README.case
-    exit -1
-  endif
-endif
+    # restart pointer exists but file missing -> try to recover from latest iced.*,
+    # else treat as a hard error (safer than silently re-initialising).
+    latest="$(ls -1 "$RESTART_DIR"/iced.*.nc 2>/dev/null | sort | tail -n 1 || true)"
+    if [[ -n "$latest" ]]; then
+      rst_name="$(basename "$latest")"
+      echo "$rst_name" > "$RESTART_PTR"
+      mode="continue"
+      log "WARNING: ice.restart_file was stale; reset to $rst_name"
+    else
+      log "ERROR: ice.restart_file exists but no restart/iced.*.nc found."
+      touch "$CRASH_FLAG"
+      exit 99
+    fi
+  fi
+else
+  # No restart pointer: if restart files exist, assume continue from latest; else initial.
+  latest="$(ls -1 "$RESTART_DIR"/iced.*.nc 2>/dev/null | sort | tail -n 1 || true)"
+  if [[ -n "$latest" ]]; then
+    rst_name="$(basename "$latest")"
+    echo "$rst_name" > "$RESTART_PTR"
+    mode="continue"
+    log "INFO: no ice.restart_file; inferred continue from latest $rst_name"
+  else
+    mode="initial"
+  fi
+fi
 
-echo "done ${0}"
+if [[ "$mode" == "initial" ]]; then
+  log "MODE=initial -> setting runtype='initial', use_restart_time=.false."
+  perl -pi -e "s/^(\s*runtype\s*=\s*).*/\1'initial'/i" "$ICE_IN"
+  perl -pi -e "s/^(\s*use_restart_time\s*=\s*).*/\1.false./i" "$ICE_IN"
+else
+  log "MODE=continue -> setting runtype='continue', use_restart_time=.true."
+  perl -pi -e "s/^(\s*runtype\s*=\s*).*/\1'continue'/i" "$ICE_IN"
+  perl -pi -e "s/^(\s*use_restart_time\s*=\s*).*/\1.true./i" "$ICE_IN"
+fi
+
+# -------------------------
+# Run the model (unchanged)
+# -------------------------
+cd "$ICE_RUNDIR"
+log "Launching CICE…"
+mpiexec -n 1232 ./cice >& cice.runlog.${PBS_JOBID}
+
+# Success test
+if ! grep -q "SUCCESSFUL TERMINATION" "cice.runlog.${PBS_JOBID}"; then
+  log "CRASH: SUCCESSFUL TERMINATION not found in cice.runlog.${PBS_JOBID}"
+  touch "$CRASH_FLAG"
+  exit 1
+fi
+
+log "Chunk finished OK."
+
+# ------------------------------------------------------------
+# Identify newest restart file and update ice.restart_file
+# ------------------------------------------------------------
+last_restart="$(ls -1 "$RESTART_DIR"/iced.*.nc 2>/dev/null | sort | tail -n 1 || true)"
+if [[ -z "$last_restart" ]]; then
+  log "ERROR: no restart file produced in $RESTART_DIR"
+  touch "$CRASH_FLAG"
+  exit 2
+fi
+
+last_restart_base="$(basename "$last_restart")"
+echo "$last_restart_base" > "$RESTART_PTR"
+log "Updated ice.restart_file -> $last_restart_base"
+
+# Keep only the latest restart in the run directory (optional but usually desired)
+find "$RESTART_DIR" -maxdepth 1 -type f -name 'iced.*.nc' ! -name "$last_restart_base" -delete || true
+
+# ------------------------------------------------------------
+# Archive history + logs (don’t break the run directory)
+# ------------------------------------------------------------
+shopt -s nullglob
+hist_files=( "$ICE_RUNDIR"/history/iceh.* )
+if (( ${#hist_files[@]} )); then
+  log "Archiving ${#hist_files[@]} history files -> $HIST_ARCH"
+  mv "$ICE_RUNDIR"/history/iceh.* "$HIST_ARCH"/
+else
+  log "No iceh.* files to archive this chunk."
+fi
+
+cp -p "cice.runlog.${PBS_JOBID}" "$ARCHROOT"/ 2>/dev/null || true
+cp -p "ice_diag.d" "$ARCHROOT"/ice_diag.d.latest 2>/dev/null || true
+cp -p "$RESTART_DIR/$last_restart_base" "$ARCHROOT"/ 2>/dev/null || true
+
+# ------------------------------------------------------------
+# Decide whether to chain another 2-year chunk or finish
+# We interpret END_DATE as inclusive last simulated day, so the
+# target restart timestamp is END_DATE + 1 day.
+# ------------------------------------------------------------
+last_date="$(echo "$last_restart_base" | sed -E 's/^iced\.([0-9]{4}-[0-9]{2}-[0-9]{2})-.*/\1/')"
+target_date="$(python3 - <<PY
+from datetime import datetime, timedelta
+d=datetime.strptime("$END_DATE","%Y-%m-%d")+timedelta(days=1)
+print(d.strftime("%Y-%m-%d"))
+PY
+)"
+
+log "last_restart_date=$last_date ; target_restart_date=$target_date"
+
+if [[ "$last_date" < "$target_date" ]]; then
+  log "Not finished -> chaining next 2-year chunk with afterok dependency."
+  next_jobid="$(qsub -W depend=afterok:${PBS_JOBID} \
+    -v CASE_NAME="$CASE_NAME",SIM_NAME="$SIM_NAME",START_DATE="$START_DATE",END_DATE="$END_DATE" \
+    "${PBS_O_WORKDIR:-$ICE_RUNDIR}/cice.run")"
+  log "Submitted NEXT job: $next_jobid"
+else
+  log "FINISHED -> writing DONE flag $DONE_FLAG"
+  echo "$(date '+%F %T') DONE last_restart=$last_restart_base" > "$DONE_FLAG"
+fi
+
+log "END chunk."
 

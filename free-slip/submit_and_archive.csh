@@ -1,13 +1,12 @@
 #!/bin/csh -f
 # Usage:
 #   ./submit_and_archive.csh -s SIM_NAME -S YYYY-MM-DD -E YYYY-MM-DD [-c CASE_NAME]
-#
 # If -c not given: CASE_NAME = basename($PWD)
 
-set CASE_NAME = ""
-set SIM_NAME  = ""
-set START_DATE = ""
-set END_DATE   = ""
+set CASE_NAME   = ""
+set SIM_NAME    = ""
+set START_DATE  = ""
+set END_DATE    = ""
 
 while ( $#argv )
   switch ( "$argv[1]" )
@@ -29,6 +28,7 @@ while ( $#argv )
       breaksw
     default:
       echo "Unknown arg: $argv[1]"
+      echo "Usage: $0 -s SIM_NAME -S YYYY-MM-DD -E YYYY-MM-DD [-c CASE_NAME]"
       exit 2
   endsw
   shift
@@ -36,6 +36,7 @@ end
 
 if ( "$SIM_NAME" == "" || "$START_DATE" == "" || "$END_DATE" == "" ) then
   echo "ERROR: must provide -s SIM_NAME -S START_DATE -E END_DATE"
+  echo "Usage: $0 -s SIM_NAME -S YYYY-MM-DD -E YYYY-MM-DD [-c CASE_NAME]"
   exit 2
 endif
 
@@ -43,36 +44,98 @@ if ( "$CASE_NAME" == "" ) then
   set CASE_NAME = `basename "$PWD"`
 endif
 
-# Export vars for the PBS job
+# Where cice.run will write its chain status flags
+set ARCHROOT  = "$HOME/AFIM_archive/$SIM_NAME"
+mkdir -p "$ARCHROOT"
+
+set DONE_FLAG  = "$ARCHROOT/cice_chain_DONE_${START_DATE}_${END_DATE}.flag"
+set CRASH_FLAG = "$ARCHROOT/cice_chain_CRASH_${START_DATE}_${END_DATE}.flag"
+
+# Export vars so cice.run knows what it is aiming for, and where to signal status
 setenv CASE_NAME   "$CASE_NAME"
 setenv SIM_NAME    "$SIM_NAME"
 setenv START_DATE  "$START_DATE"
 setenv END_DATE    "$END_DATE"
+setenv DONE_FLAG   "$DONE_FLAG"
+setenv CRASH_FLAG  "$CRASH_FLAG"
 
-# Submit the first chunk. cice.run will auto-chain subsequent chunks.
-qsub -V ./cice.run
+# Submit ONE job only. cice.run is responsible for chaining 2-year chunks + restart logic.
+set first_jobid = "`qsub -V ./cice.run`"
+if ( "$first_jobid" == "" ) then
+  echo "ERROR: qsub returned empty job id."
+  exit 2
+endif
 
-echo "`date` ${0}: submitted first chunk for CASE=$CASE_NAME SIM=$SIM_NAME ($START_DATE .. $END_DATE)" >> ${PWD}/README.case
+echo "`date` submit_and_archive: submitted CICE chain start job=$first_jobid CASE=$CASE_NAME SIM=$SIM_NAME ($START_DATE..$END_DATE)" > ${PWD}/README.case
+echo "Waiting for DONE flag: $DONE_FLAG" >> ${PWD}/README.case
+echo "Crash flag is:          $CRASH_FLAG" >> ${PWD}/README.case
 
-# -------- reached END successfully --------
-echo "`date` Completed all chunks through END=$END (last_good_end=$LAST_GOOD_END)"
-echo "`date` Running AFIM wrappers for full period: $START -> $END"
+# Wait for CICE chain to finish (DONE) or fail (CRASH)
+while ( ! -e "$DONE_FLAG" )
+  if ( -e "$CRASH_FLAG" ) then
+    echo "ERROR: CICE chain crashed."
+    echo "See: $CRASH_FLAG"
+    exit 1
+  endif
+  sleep 600
+end
 
-cd "$CLASS_DIR" || exit 11
-./classify_sea_ice_pbs_wrapper.sh -s "$SIM" -i FI -g Tc -S "$START" -E "$END" -z -y -k
+echo "`date` submit_and_archive: CICE chain finished OK: `cat $DONE_FLAG`" >> ${PWD}/README.case
 
-cd "$METRICS_DIR" || exit 11
-./metrics_pbs_wrapper.sh -s "$SIM" -i FI -g Tc -S "$START" -E "$END" -z -p
+# -----------------------------
+# Post-processing (only after DONE):
+#   1) fast-ice classification (PBS jobs)
+#   2) metrics (PBS) AFTER classification completes successfully
+# -----------------------------
 
-if ( -e "$METLOG" ) tail "$METLOG"
-exit 0
+set CLASS_WRAP = "$HOME/AFIM/src/AFIM/scripts/classification/classify_sea_ice_pbs_wrapper.sh"
+set MET_PBS    = "$HOME/AFIM/src/AFIM/scripts/metrics/metrics.pbs"
 
-usage:
-echo "Usage:"
-echo "  $0 -s SIM_NAME -S YYYY-MM-DD -E YYYY-MM-DD [-c CASE_NAME]"
-echo ""
-echo "Behaviour:"
-echo "  - Runs in <=2-year chunks until END or crash."
-echo "  - Auto-detects restart if ice.restart_file + matching restart/iced.* present."
-echo "  - Enforces: runtype/use_restart_time consistent with initial vs continue."
-exit 1
+# Submit classification (yearly) and capture job IDs robustly
+set CLASS_OUT = "$ARCHROOT/classify_submit_${START_DATE}_${END_DATE}_$$.out"
+echo "`date` submit_and_archive: submitting classification..." >> ${PWD}/README.case
+
+bash "$CLASS_WRAP" -s "$SIM_NAME" -i FI -g Tc -S "$START_DATE" -E "$END_DATE" -z -y -k |& tee "$CLASS_OUT"
+
+set class_jobids = ()
+foreach jid ( `awk '/^[0-9]/{print $1}' "$CLASS_OUT"` )
+  set class_jobids = ( $class_jobids $jid )
+end
+
+if ( $#class_jobids == 0 ) then
+  echo "ERROR: No classification job IDs captured. See: $CLASS_OUT"
+  exit 2
+endif
+
+set dep = `echo $class_jobids | tr ' ' ':'`
+echo "Classification job IDs: $class_jobids" >> ${PWD}/README.case
+echo "Metrics dependency: afterok:$dep" >> ${PWD}/README.case
+
+# Build env file for metrics.pbs (ENVFILE contract)
+set MET_ENV = "$HOME/logs/ENVFILE_metrics_${SIM_NAME}_$$.sh"
+cat >! "$MET_ENV" << EOF
+#!/bin/bash
+export sim_name="$SIM_NAME"
+export ispd_thresh="0.0005"
+export ice_type="FI"
+export borc2t_type="Tc"
+export start_date="$START_DATE"
+export end_date="$END_DATE"
+export overwrite_zarr=true
+export overwrite_png=true
+export compute_boolean=false
+EOF
+chmod +x "$MET_ENV"
+
+# Submit metrics job AFTER ALL classification jobs succeed
+set met_jobid = "`qsub -W depend=afterok:$dep -v ENVFILE="$MET_ENV" "$MET_PBS"`"
+if ( "$met_jobid" == "" ) then
+  echo "ERROR: metrics qsub returned empty job id."
+  exit 2
+endif
+
+echo "Submitted metrics job: $met_jobid" >> ${PWD}/README.case
+echo "Tail metrics log:" >> ${PWD}/README.case
+echo "  tail $HOME/logs/metrics_${SIM_NAME}_ispd_thresh0.0005.log" >> ${PWD}/README.case
+
+echo "`date` submit_and_archive: DONE (submitted post-processing)" >> ${PWD}/README.case

@@ -1,0 +1,11 @@
+#!/bin/bash
+#PBS -N cice_driver_00
+#PBS -P gv90
+#PBS -q normal
+#PBS -l walltime=12:00:00
+#PBS -l ncpus=1
+#PBS -l mem=1GB
+#PBS -j oe
+#PBS -o $HOME/logs/submit_and_archive_driver.log
+cd $HOME/CICE_free-slip/free-slip
+./submit_and_archive.csh -s "$SIM_NAME" -S "$START_DATE" -E "$END_DATE"
