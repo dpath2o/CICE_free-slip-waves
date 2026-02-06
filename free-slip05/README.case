@@ -1,0 +1,609 @@
+Wed Oct 22 02:50:00 AEDT 2025 ./cice.setup --case free-slip -g gbox12 -m gadi1 -e intel -p 1x1 -s boxforcee,boxclosed,buildincremental
+Wed Oct 22 02:50:00 AEDT 2025 ./cice.setup adding namelist modes set_nml.gbox12
+Wed Oct 22 02:50:00 AEDT 2025 ./cice.setup adding namelist modes set_nml.boxforcee
+Wed Oct 22 02:50:00 AEDT 2025 ./cice.setup adding namelist modes set_nml.boxclosed
+Wed Oct 22 02:50:00 AEDT 2025 ./cice.setup adding namelist modes set_env.buildincremental
+Wed Oct 22 03:02:03 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-030041
+Wed Oct 22 03:03:24 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 03:04:09 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153037183.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-030407
+Wed Oct 22 03:04:09 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153037183.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 03:04:09 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153037183.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 03:52:33 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-035224
+Wed Oct 22 03:53:19 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 03:53:52 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153040414.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-035349
+Wed Oct 22 03:53:52 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153040414.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 03:53:52 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153040414.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 04:00:29 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 04:01:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153040929.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-040103
+Wed Oct 22 04:01:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153040929.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 04:01:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153040929.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 04:06:14 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-040454
+Wed Oct 22 04:06:28 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 04:06:56 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041376.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-040654
+Wed Oct 22 04:06:56 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041376.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 04:06:56 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041376.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 04:14:47 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 04:15:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041659.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-041518
+Wed Oct 22 04:15:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041659.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 04:15:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041659.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 04:17:40 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 04:18:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041702.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-041806
+Wed Oct 22 04:18:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041702.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 04:18:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041702.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 04:20:04 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-041955
+Wed Oct 22 04:20:09 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 04:20:49 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041772.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-042045
+Wed Oct 22 04:20:50 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041772.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 04:20:50 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041772.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 04:24:42 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-042419
+Wed Oct 22 04:24:48 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 04:25:27 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041851.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-042522
+Wed Oct 22 04:25:27 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041851.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 04:25:27 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153041851.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 05:41:53 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-054130
+Wed Oct 22 05:46:02 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 05:46:38 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153043729.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-054629
+Wed Oct 22 05:46:38 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153043729.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 05:46:38 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153043729.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 07:01:26 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-070109
+Wed Oct 22 07:01:43 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 07:02:43 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153044888.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-070237
+Wed Oct 22 07:02:43 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153044888.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 07:02:43 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153044888.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 07:09:35 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-070911
+Wed Oct 22 07:10:13 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 07:11:31 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153044944.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-071130
+Wed Oct 22 07:11:31 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153044944.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 07:11:31 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153044944.gadi-pbs.SC: CICE run did NOT complete
+Wed Oct 22 07:12:49 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 07:13:53 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-071329
+Wed Oct 22 07:14:00 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 07:14:55 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153044981.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-071454
+Wed Oct 22 07:14:55 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153044981.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 07:14:55 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153044981.gadi-pbs.SC: CICE run did NOT complete
+Wed Oct 22 08:14:24 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-081407
+Wed Oct 22 08:14:30 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 08:15:25 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153046220.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-081524
+Wed Oct 22 08:15:25 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153046220.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 08:15:25 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153046220.gadi-pbs.SC: CICE run did NOT complete
+Wed Oct 22 08:28:44 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-082827
+Wed Oct 22 08:28:50 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 08:29:42 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153046429.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-082940
+Wed Oct 22 08:29:42 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153046429.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 08:29:42 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153046429.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 08:44:26 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-084403
+Wed Oct 22 08:44:31 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 08:45:35 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153047381.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-084530
+Wed Oct 22 08:45:35 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153047381.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 08:45:35 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153047381.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 08:47:35 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-084712
+Wed Oct 22 08:47:58 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 08:48:47 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153047502.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-084843
+Wed Oct 22 08:48:47 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153047502.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 08:48:47 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153047502.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 08:53:21 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-085258
+Wed Oct 22 08:53:25 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 08:54:23 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153047716.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-085419
+Wed Oct 22 08:54:23 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153047716.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 08:54:23 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153047716.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 09:05:05 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-090454
+Wed Oct 22 09:05:16 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 09:06:54 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153048121.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-090645
+Wed Oct 22 09:06:54 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153048121.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 09:06:54 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153048121.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 09:08:44 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 09:09:52 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153048422.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-090945
+Wed Oct 22 09:09:52 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153048422.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 09:09:53 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153048422.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 10:18:15 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-101747
+Wed Oct 22 10:18:59 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 10:19:33 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153052210.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-101927
+Wed Oct 22 10:19:33 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153052210.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 10:19:33 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153052210.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 10:41:18 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-104107
+Wed Oct 22 10:41:35 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 10:42:21 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153054138.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-104214
+Wed Oct 22 10:42:21 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153054138.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 10:42:21 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153054138.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 10:45:59 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-104550
+Wed Oct 22 10:46:16 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 10:47:37 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153054497.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-104732
+Wed Oct 22 10:47:37 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153054497.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 10:47:37 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153054497.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 10:50:29 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-105020
+Wed Oct 22 10:50:45 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 10:51:27 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153054868.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-105121
+Wed Oct 22 10:51:27 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153054868.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 10:51:27 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153054868.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 10:55:57 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-105548
+Wed Oct 22 10:56:04 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 10:56:38 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153055416.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-105632
+Wed Oct 22 10:56:38 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153055416.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 10:56:38 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153055416.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 11:05:13 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-110502
+Wed Oct 22 11:05:22 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 11:06:08 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153056112.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-110602
+Wed Oct 22 11:06:08 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153056112.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 11:06:08 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153056112.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 11:15:39 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-111526
+Wed Oct 22 11:17:06 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 11:17:40 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153056785.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-111734
+Wed Oct 22 11:17:40 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153056785.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 11:17:40 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153056785.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 11:28:37 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-112827
+Wed Oct 22 11:31:04 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 11:31:59 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153058023.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-113152
+Wed Oct 22 11:31:59 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153058023.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 11:31:59 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153058023.gadi-pbs.SC: CICE run completed successfully
+Wed Oct 22 12:31:39 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251022-123016
+Wed Oct 22 19:47:44 AEDT 2025 ./cice.submit: free-slip job submitted
+Wed Oct 22 19:48:13 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153130544.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251022-194807
+Wed Oct 22 19:48:13 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153130544.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Oct 22 19:48:13 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153130544.gadi-pbs.SC: CICE run completed successfully
+Thu Oct 23 00:46:24 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251023-004620
+Thu Oct 23 00:46:39 AEDT 2025 ./cice.submit: free-slip job submitted
+Thu Oct 23 00:47:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153150352.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251023-004705
+Thu Oct 23 00:47:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153150352.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Oct 23 00:47:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153150352.gadi-pbs.SC: CICE run completed successfully
+Thu Oct 23 06:32:22 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251023-063101
+Thu Oct 23 06:36:26 AEDT 2025 ./cice.submit: free-slip job submitted
+Thu Oct 23 06:36:59 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153164265.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251023-063649
+Thu Oct 23 06:36:59 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153164265.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Oct 23 06:36:59 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153164265.gadi-pbs.SC: CICE run completed successfully
+Thu Oct 23 06:51:03 AEDT 2025 ./cice.submit: free-slip job submitted
+Thu Oct 23 06:51:29 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153164618.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251023-065123
+Thu Oct 23 06:51:29 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153164618.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Oct 23 06:51:29 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153164618.gadi-pbs.SC: CICE run completed successfully
+Thu Oct 23 07:41:53 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251023-074129
+Thu Oct 23 07:43:59 AEDT 2025 ./cice.submit: free-slip job submitted
+Thu Oct 23 07:44:18 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153166139.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251023-074412
+Thu Oct 23 07:44:18 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153166139.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Oct 23 07:44:18 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153166139.gadi-pbs.SC: CICE run completed successfully
+Fri Oct 24 19:28:00 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Oct 24 19:28:29 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153309079.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251024-192820
+Fri Oct 24 19:28:29 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153309079.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Oct 24 19:28:29 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153309079.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 01:35:12 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 01:35:39 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321062.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-013532
+Sat Oct 25 01:35:39 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321062.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 01:35:39 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321062.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 01:49:45 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 01:50:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321462.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-014959
+Sat Oct 25 01:50:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321462.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 01:50:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321462.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 01:51:33 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 01:52:00 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321507.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-015148
+Sat Oct 25 01:52:00 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321507.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 01:52:00 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321507.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 01:52:37 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 01:53:06 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321537.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-015250
+Sat Oct 25 01:53:07 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321537.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 01:53:07 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321537.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 01:53:48 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 01:54:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321566.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-015404
+Sat Oct 25 01:54:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321566.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 01:54:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153321566.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 03:16:06 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 03:16:34 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153323632.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-031616
+Sat Oct 25 03:16:34 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153323632.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 03:16:34 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153323632.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 03:20:23 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251025-032000
+Sat Oct 25 03:20:33 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 03:20:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153323778.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-032049
+Sat Oct 25 03:20:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153323778.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 03:20:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153323778.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 03:37:13 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251025-033651
+Sat Oct 25 03:37:30 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 03:37:45 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324013.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-033738
+Sat Oct 25 03:37:45 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324013.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 03:37:45 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324013.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 04:00:20 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251025-035958
+Sat Oct 25 04:00:48 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 04:01:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324504.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-040058
+Sat Oct 25 04:01:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324504.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 04:01:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324504.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 04:04:46 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251025-040423
+Sat Oct 25 04:04:56 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 04:05:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324579.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-040507
+Sat Oct 25 04:05:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324579.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 04:05:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324579.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 04:14:31 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 04:14:53 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324708.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-041440
+Sat Oct 25 04:14:53 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324708.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 04:14:53 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324708.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 04:23:08 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251025-042245
+Sat Oct 25 04:25:58 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 04:26:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324882.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-042608
+Sat Oct 25 04:26:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324882.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 04:26:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153324882.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 04:41:47 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251025-044121
+Sat Oct 25 04:56:01 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 04:56:18 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153325456.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-045612
+Sat Oct 25 04:56:18 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153325456.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 04:56:18 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153325456.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 05:33:22 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 05:33:41 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153326092.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-053333
+Sat Oct 25 05:33:41 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153326092.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 05:33:41 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153326092.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 06:34:03 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251025-063321
+Sat Oct 25 06:39:01 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 06:39:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153328178.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-063913
+Sat Oct 25 06:39:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153328178.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 06:39:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153328178.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 06:56:49 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 06:57:10 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153328590.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-065700
+Sat Oct 25 06:57:10 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153328590.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 06:57:10 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153328590.gadi-pbs.SC: CICE run completed successfully
+Sat Oct 25 07:51:53 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251025-075118
+Sat Oct 25 07:52:01 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Oct 25 07:52:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153329638.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251025-075207
+Sat Oct 25 07:52:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153329638.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Oct 25 07:52:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153329638.gadi-pbs.SC: CICE run completed successfully
+Mon Oct 27 01:01:23 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-010107
+Mon Oct 27 01:03:05 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 01:03:25 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153399708.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-010317
+Mon Oct 27 01:03:25 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153399708.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 01:03:25 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153399708.gadi-pbs.SC: CICE run completed successfully
+Mon Oct 27 01:08:03 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-010752
+Mon Oct 27 01:08:13 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 01:08:30 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153399799.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-010824
+Mon Oct 27 01:08:30 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153399799.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 01:08:30 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153399799.gadi-pbs.SC: CICE run completed successfully
+Mon Oct 27 01:19:35 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-011854
+Mon Oct 27 01:19:43 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 01:20:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153399874.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-011959
+Mon Oct 27 01:20:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153399874.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 01:20:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153399874.gadi-pbs.SC: CICE run completed successfully
+Mon Oct 27 01:58:54 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-015850
+Mon Oct 27 01:59:00 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 01:59:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400166.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-015911
+Mon Oct 27 01:59:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400166.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 01:59:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400166.gadi-pbs.SC: CICE run completed successfully
+Mon Oct 27 02:39:44 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-023900
+Mon Oct 27 02:39:52 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 02:40:01 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400433.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-024001
+Mon Oct 27 02:40:01 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400433.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 02:40:01 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400433.gadi-pbs.SC: CICE run did NOT complete
+Mon Oct 27 02:43:30 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-024319
+Mon Oct 27 02:43:42 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 02:43:51 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400495.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-024351
+Mon Oct 27 02:43:51 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400495.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 02:43:51 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400495.gadi-pbs.SC: CICE run did NOT complete
+Mon Oct 27 02:55:16 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-025435
+Mon Oct 27 02:55:23 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 02:55:36 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400599.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-025530
+Mon Oct 27 02:55:36 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400599.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 02:55:36 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153400599.gadi-pbs.SC: CICE run completed successfully
+Mon Oct 27 03:11:02 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 03:11:56 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 03:12:26 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-031215
+Mon Oct 27 03:12:30 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 03:12:45 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153401089.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-031239
+Mon Oct 27 03:12:45 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153401089.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 03:12:45 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153401089.gadi-pbs.SC: CICE run completed successfully
+Mon Oct 27 03:43:14 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-034302
+Mon Oct 27 03:43:24 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 03:46:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153402665.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-034611
+Mon Oct 27 03:46:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153402665.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 03:46:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153402665.gadi-pbs.SC: CICE run completed successfully
+Mon Oct 27 04:02:27 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-040145
+Mon Oct 27 04:02:34 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 04:02:54 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153402865.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-040247
+Mon Oct 27 04:02:54 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153402865.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 04:02:54 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153402865.gadi-pbs.SC: CICE run completed successfully
+Mon Oct 27 07:47:52 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-074739
+Mon Oct 27 07:48:12 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 07:48:25 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405583.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-074825
+Mon Oct 27 07:48:25 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405583.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 07:48:25 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405583.gadi-pbs.SC: CICE run did NOT complete
+Mon Oct 27 07:52:08 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-075125
+Mon Oct 27 07:52:20 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 07:52:30 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405696.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-075229
+Mon Oct 27 07:52:30 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405696.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 07:52:30 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405696.gadi-pbs.SC: CICE run did NOT complete
+Mon Oct 27 08:00:25 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-075943
+Mon Oct 27 08:00:38 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 08:01:01 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405763.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-080048
+Mon Oct 27 08:01:01 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405763.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 08:01:01 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405763.gadi-pbs.SC: CICE run completed successfully
+Mon Oct 27 08:09:33 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251027-080852
+Mon Oct 27 08:09:45 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Oct 27 08:10:00 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405834.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251027-080954
+Mon Oct 27 08:10:01 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405834.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Oct 27 08:10:01 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153405834.gadi-pbs.SC: CICE run completed successfully
+Tue Oct 28 11:17:21 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251028-111633
+Tue Oct 28 11:37:04 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251028-113651
+Tue Oct 28 11:37:17 AEDT 2025 ./cice.submit: free-slip job submitted
+Tue Oct 28 11:38:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153535902.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251028-113807
+Tue Oct 28 11:38:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153535902.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Tue Oct 28 11:38:14 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153535902.gadi-pbs.SC: CICE run completed successfully
+Tue Oct 28 11:55:16 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251028-115452
+Thu Oct 30 14:46:11 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251030-144547
+Thu Oct 30 14:46:20 AEDT 2025 ./cice.submit: free-slip job submitted
+Thu Oct 30 14:46:41 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153722048.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251030-144633
+Thu Oct 30 14:46:41 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153722048.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Oct 30 14:46:41 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153722048.gadi-pbs.SC: CICE run completed successfully
+Thu Oct 30 14:57:34 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251030-145708
+Thu Oct 30 14:57:40 AEDT 2025 ./cice.submit: free-slip job submitted
+Thu Oct 30 14:58:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153722538.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251030-145759
+Thu Oct 30 14:58:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153722538.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Oct 30 14:58:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153722538.gadi-pbs.SC: CICE run completed successfully
+Thu Oct 30 15:08:19 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251030-150801
+Thu Oct 30 15:08:25 AEDT 2025 ./cice.submit: free-slip job submitted
+Thu Oct 30 15:08:45 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153722986.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251030-150839
+Thu Oct 30 15:08:45 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153722986.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Oct 30 15:08:45 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153722986.gadi-pbs.SC: CICE run completed successfully
+Fri Oct 31 09:06:26 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251031-090558
+Fri Oct 31 09:07:55 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251031-090732
+Fri Oct 31 09:08:03 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Oct 31 09:08:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153754578.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251031-090813
+Fri Oct 31 09:08:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153754578.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Oct 31 09:08:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153754578.gadi-pbs.SC: CICE run completed successfully
+Fri Oct 31 10:09:18 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251031-100855
+Fri Oct 31 10:10:26 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Oct 31 10:10:43 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153756012.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251031-101037
+Fri Oct 31 10:10:44 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153756012.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Oct 31 10:10:44 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153756012.gadi-pbs.SC: CICE run completed successfully
+Fri Oct 31 10:31:50 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251031-103123
+Fri Oct 31 10:32:40 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Oct 31 10:33:02 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153756920.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251031-103255
+Fri Oct 31 10:33:02 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153756920.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Oct 31 10:33:02 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153756920.gadi-pbs.SC: CICE run completed successfully
+Fri Oct 31 11:41:19 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251031-114106
+Fri Oct 31 11:42:30 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Oct 31 11:42:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153759676.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251031-114251
+Fri Oct 31 11:42:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153759676.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Oct 31 11:42:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153759676.gadi-pbs.SC: CICE run completed successfully
+Fri Oct 31 11:56:32 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Oct 31 11:56:48 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153760278.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251031-115648
+Fri Oct 31 11:56:48 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153760278.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Oct 31 11:56:48 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153760278.gadi-pbs.SC: CICE run did NOT complete
+Fri Oct 31 12:08:52 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251031-120829
+Fri Oct 31 12:15:03 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Oct 31 12:15:26 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153760876.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251031-121519
+Fri Oct 31 12:15:26 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153760876.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Oct 31 12:15:26 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153760876.gadi-pbs.SC: CICE run completed successfully
+Sat Nov  1 02:45:33 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251101-024517
+Sat Nov  1 02:45:59 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Nov  1 02:46:23 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153806557.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251101-024617
+Sat Nov  1 02:46:23 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153806557.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Nov  1 02:46:23 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153806557.gadi-pbs.SC: CICE run completed successfully
+Sat Nov  1 03:04:06 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Nov  1 03:04:28 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153807072.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251101-030422
+Sat Nov  1 03:04:28 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153807072.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Nov  1 03:04:28 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153807072.gadi-pbs.SC: CICE run completed successfully
+Sat Nov  1 03:26:49 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251101-032608
+Sat Nov  1 03:26:55 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Nov  1 03:27:08 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153807768.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251101-032708
+Sat Nov  1 03:27:08 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153807768.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Nov  1 03:27:08 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153807768.gadi-pbs.SC: CICE run did NOT complete
+Sat Nov  1 03:37:37 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251101-033656
+Sat Nov  1 03:37:45 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Nov  1 03:37:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153808063.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251101-033757
+Sat Nov  1 03:37:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153808063.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Nov  1 03:37:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153808063.gadi-pbs.SC: CICE run did NOT complete
+Sat Nov  1 03:46:23 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251101-034542
+Sat Nov  1 03:46:32 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Nov  1 03:46:52 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153808452.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251101-034647
+Sat Nov  1 03:46:52 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153808452.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Nov  1 03:46:52 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153808452.gadi-pbs.SC: CICE run completed successfully
+Sat Nov  1 04:02:28 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251101-040145
+Sat Nov  1 04:02:39 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Nov  1 04:02:59 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809037.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251101-040253
+Sat Nov  1 04:02:59 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809037.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Nov  1 04:02:59 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809037.gadi-pbs.SC: CICE run completed successfully
+Sat Nov  1 04:14:21 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251101-041340
+Sat Nov  1 04:14:30 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Nov  1 04:14:48 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809530.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251101-041442
+Sat Nov  1 04:14:48 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809530.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Nov  1 04:14:48 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809530.gadi-pbs.SC: CICE run completed successfully
+Sat Nov  1 04:18:58 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251101-041816
+Sat Nov  1 04:19:03 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Nov  1 04:19:21 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809649.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251101-041916
+Sat Nov  1 04:19:21 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809649.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Nov  1 04:19:21 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809649.gadi-pbs.SC: CICE run completed successfully
+Sat Nov  1 04:27:52 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251101-042710
+Sat Nov  1 04:28:09 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Nov  1 04:28:30 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809825.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251101-042824
+Sat Nov  1 04:28:30 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809825.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Nov  1 04:28:30 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153809825.gadi-pbs.SC: CICE run completed successfully
+Sat Nov  1 04:39:41 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251101-043900
+Sat Nov  1 04:39:45 AEDT 2025 ./cice.submit: free-slip job submitted
+Sat Nov  1 04:40:03 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153810021.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251101-043957
+Sat Nov  1 04:40:03 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153810021.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Sat Nov  1 04:40:03 AEDT 2025 /local/spool/pbs/mom_priv/jobs/153810021.gadi-pbs.SC: CICE run completed successfully
+Fri Dec 26 11:46:04 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Dec 26 11:48:50 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157342851.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251226-114643
+Fri Dec 26 11:48:50 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157342851.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Dec 26 11:48:50 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157342851.gadi-pbs.SC: CICE run completed successfully
+Fri Dec 26 11:57:41 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251226-115644
+Fri Dec 26 11:57:57 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Dec 26 11:58:49 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157342923.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251226-115838
+Fri Dec 26 11:58:49 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157342923.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Dec 26 11:58:49 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157342923.gadi-pbs.SC: CICE run completed successfully
+Fri Dec 26 12:14:19 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251226-121336
+Fri Dec 26 12:16:02 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Dec 26 12:17:03 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157343155.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251226-121643
+Fri Dec 26 12:17:03 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157343155.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Dec 26 12:17:03 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157343155.gadi-pbs.SC: CICE run completed successfully
+Fri Dec 26 14:55:10 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251226-145442
+Fri Dec 26 14:58:27 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Dec 26 14:59:10 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157347764.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251226-145903
+Fri Dec 26 14:59:10 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157347764.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Dec 26 14:59:10 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157347764.gadi-pbs.SC: CICE run completed successfully
+Fri Dec 26 16:20:18 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251226-162003
+Fri Dec 26 16:20:33 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Dec 26 16:21:18 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349700.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251226-162114
+Fri Dec 26 16:21:18 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349700.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Dec 26 16:21:18 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349700.gadi-pbs.SC: CICE run completed successfully
+Fri Dec 26 16:37:30 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Dec 26 16:38:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349778.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251226-163809
+Fri Dec 26 16:38:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349778.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Dec 26 16:38:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349778.gadi-pbs.SC: CICE run completed successfully
+Fri Dec 26 16:40:16 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251226-163951
+Fri Dec 26 16:40:32 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Dec 26 16:41:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349801.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251226-164118
+Fri Dec 26 16:41:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349801.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Dec 26 16:41:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349801.gadi-pbs.SC: CICE run completed successfully
+Fri Dec 26 16:45:31 AEDT 2025 ./cice.submit: free-slip job submitted
+Fri Dec 26 16:46:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349829.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251226-164609
+Fri Dec 26 16:46:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349829.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Fri Dec 26 16:46:11 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157349829.gadi-pbs.SC: CICE run completed successfully
+Mon Dec 29 10:07:40 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251229-100717
+Mon Dec 29 10:08:24 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 10:10:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413189.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-100912
+Mon Dec 29 10:10:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413189.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 10:10:05 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413189.gadi-pbs.SC: CICE run did NOT complete
+Mon Dec 29 10:16:14 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 10:17:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413214.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-101719
+Mon Dec 29 10:17:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413214.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 10:17:20 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413214.gadi-pbs.SC: CICE run did NOT complete
+Mon Dec 29 10:19:48 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 10:20:34 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413226.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-102033
+Mon Dec 29 10:20:34 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413226.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 10:20:34 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413226.gadi-pbs.SC: CICE run did NOT complete
+Mon Dec 29 10:43:01 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 10:43:54 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413916.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-104353
+Mon Dec 29 10:43:54 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413916.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 10:43:54 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157413916.gadi-pbs.SC: CICE run did NOT complete
+Mon Dec 29 11:00:50 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 11:28:36 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251229-112704
+Mon Dec 29 11:30:21 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 11:33:48 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414249.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-113052
+Mon Dec 29 11:33:48 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414249.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 11:33:48 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414249.gadi-pbs.SC: CICE run did NOT complete
+Mon Dec 29 11:45:28 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 11:48:56 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414375.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-114603
+Mon Dec 29 11:48:56 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414375.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 11:48:56 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414375.gadi-pbs.SC: CICE run did NOT complete
+Mon Dec 29 11:54:08 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 11:56:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414406.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-115433
+Mon Dec 29 11:56:57 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414406.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 11:56:58 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414406.gadi-pbs.SC: CICE run did NOT complete
+Mon Dec 29 12:00:36 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 12:04:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414424.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-120125
+Mon Dec 29 12:04:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414424.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 12:04:17 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414424.gadi-pbs.SC: CICE run did NOT complete
+Mon Dec 29 12:04:47 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 12:08:26 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414453.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-120514
+Mon Dec 29 12:08:26 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414453.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 12:08:26 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414453.gadi-pbs.SC: CICE run did NOT complete
+Mon Dec 29 12:13:10 AEDT 2025 ./cice.submit: free-slip job submitted
+Mon Dec 29 12:17:36 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414518.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-121410
+Mon Dec 29 12:17:36 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414518.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 12:17:36 AEDT 2025 /local/spool/pbs/mom_priv/jobs/157414518.gadi-pbs.SC: CICE run did NOT complete
+Mon Dec 29 13:03:21 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-130319
+Mon Dec 29 13:03:21 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 13:03:21 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE run did NOT complete
+Mon Dec 29 13:13:01 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-131005
+Mon Dec 29 13:13:01 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 13:13:01 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE run did NOT complete
+Mon Dec 29 14:04:37 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-140140
+Mon Dec 29 14:04:37 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 14:04:37 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE run did NOT complete
+Mon Dec 29 14:31:04 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-142824
+Mon Dec 29 14:31:04 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 14:31:04 AEDT 2025 /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/cice.run: CICE run did NOT complete
+Mon Dec 29 14:52:09 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-144917
+Mon Dec 29 14:52:09 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 14:52:09 AEDT 2025 ./cice.run: CICE run did NOT complete
+Mon Dec 29 14:55:06 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251229-145405
+Mon Dec 29 15:00:27 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-145727
+Mon Dec 29 15:00:27 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 15:00:27 AEDT 2025 ./cice.run: CICE run did NOT complete
+Mon Dec 29 15:26:46 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251229-152516
+Mon Dec 29 15:40:39 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251229-154032
+Mon Dec 29 15:40:39 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Mon Dec 29 15:40:39 AEDT 2025 ./cice.run: CICE run did NOT complete
+Wed Dec 31 16:12:25 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251231-161145
+Wed Dec 31 16:12:25 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Dec 31 16:12:25 AEDT 2025 ./cice.run: CICE run did NOT complete
+Wed Dec 31 16:20:14 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251231-161943
+Wed Dec 31 16:20:14 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Dec 31 16:20:14 AEDT 2025 ./cice.run: CICE run did NOT complete
+Wed Dec 31 16:37:08 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251231-163612
+Wed Dec 31 16:37:08 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Dec 31 16:37:08 AEDT 2025 ./cice.run: CICE run did NOT complete
+Wed Dec 31 16:46:47 AEDT 2025 ./cice.build:free-slip build completed cice.bldlog.251231-164614
+Wed Dec 31 16:48:43 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.251231-164741
+Wed Dec 31 16:48:43 AEDT 2025 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Wed Dec 31 16:48:43 AEDT 2025 ./cice.run: CICE run did NOT complete
+Thu Jan  1 09:41:52 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.260101-094109
+Thu Jan  1 09:41:52 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Jan  1 09:41:52 AEDT 2026 ./cice.run: CICE run did NOT complete
+Thu Jan  1 09:57:47 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260101-095721
+Thu Jan  1 11:19:20 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.260101-111843
+Thu Jan  1 11:19:20 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Jan  1 11:19:20 AEDT 2026 ./cice.run: CICE run did NOT complete
+Thu Jan  1 11:48:32 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260101-114808
+Thu Jan  1 11:49:50 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.260101-114915
+Thu Jan  1 11:49:50 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Jan  1 11:49:50 AEDT 2026 ./cice.run: CICE run did NOT complete
+Thu Jan  1 12:15:44 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.260101-121508
+Thu Jan  1 12:15:44 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Jan  1 12:15:44 AEDT 2026 ./cice.run: CICE run did NOT complete
+Thu Jan  1 13:01:37 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260101-130114
+Thu Jan  1 13:06:52 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.260101-130230
+Thu Jan  1 13:06:52 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Jan  1 13:06:52 AEDT 2026 ./cice.run: CICE run completed successfully
+Thu Jan  1 14:21:23 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260101-142100
+Thu Jan  1 14:29:42 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/cice.runlog.260101-142149
+Thu Jan  1 14:29:42 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip/logs/ice_diag.d
+Thu Jan  1 14:29:42 AEDT 2026 ./cice.run: CICE run completed successfully
+Thu Jan  1 14:59:20 AEDT 2026 ./cice.build:free-slip build completed cice.bldlog.260101-145858
+Thu Jan  1 15:45:25 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260101-154356
+Fri Jan  2 09:15:58 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260102-074605
+Fri Jan  2 09:15:58 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Fri Jan  2 09:15:58 AEDT 2026 ./cice.run: CICE run completed successfully
+Fri Jan  2 11:55:59 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260102-115531
+Fri Jan  2 15:11:00 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260102-120436
+Fri Jan  2 15:11:00 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Fri Jan  2 15:11:00 AEDT 2026 ./cice.run: CICE run completed successfully
+Tue Jan  6 12:21:47 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260106-113733
+Tue Jan  6 12:21:47 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Tue Jan  6 12:21:47 AEDT 2026 ./cice.run: CICE run completed successfully
+Mon Jan 12 22:11:23 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260112-221030
+Mon Jan 12 23:49:06 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260112-234904
+Tue Jan 13 02:52:00 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260112-235253
+Tue Jan 13 02:52:00 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Tue Jan 13 02:52:00 AEDT 2026 ./cice.run: CICE run completed successfully
+Tue Jan 13 07:58:48 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260113-051044
+Tue Jan 13 07:58:48 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Tue Jan 13 07:58:49 AEDT 2026 ./cice.run: CICE run completed successfully
+Sun Jan 18 17:05:40 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260118-170528
+Sun Jan 18 17:31:45 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260118-173129
+Sun Jan 18 17:31:45 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Sun Jan 18 17:31:45 AEDT 2026 ./cice.run: CICE run did NOT complete
+Sun Jan 18 20:27:36 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260118-202610
+Sun Jan 18 20:28:19 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260118-202805
+Sun Jan 18 20:28:19 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Sun Jan 18 20:28:19 AEDT 2026 ./cice.run: CICE run did NOT complete
+Sun Jan 18 20:33:57 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/cice.runlog.260118-203344
+Sun Jan 18 20:33:57 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip01/logs/ice_diag.d
+Sun Jan 18 20:33:57 AEDT 2026 ./cice.run: CICE run did NOT complete
+Sun Jan 18 20:36:37 AEDT 2026 ./cice.build:free-slip01 build completed cice.bldlog.260118-203626
+Sun Jan 18 20:49:51 AEDT 2026 ./cice.build:free-slip02 build completed cice.bldlog.260118-204824
+Sun Jan 18 21:07:34 AEDT 2026 ./cice.build:free-slip04 build completed cice.bldlog.260118-210609
+Sun Jan 18 23:54:52 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/cice.runlog.260118-211041
+Sun Jan 18 23:54:52 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/ice_diag.d
+Sun Jan 18 23:54:52 AEDT 2026 ./cice.run: CICE run completed successfully
+Wed Jan 21 12:53:00 AEDT 2026 ./cice.build:free-slip04 build completed cice.bldlog.260121-125221
+Wed Jan 21 14:54:19 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/cice.runlog.260121-125350
+Wed Jan 21 14:54:19 AEDT 2026 ./cice.run: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/ice_diag.d
+Wed Jan 21 14:54:19 AEDT 2026 ./cice.run: CICE run completed successfully
+Fri Jan 30 09:42:51 AEDT 2026 ./cice.build:free-slip04 build completed cice.bldlog.260130-094126
+Fri Jan 30 09:53:45 AEDT 2026 ./cice.submit: free-slip job submitted
+Fri Jan 30 13:27:16 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159626071.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/cice.runlog.260130-095400
+Fri Jan 30 13:27:16 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159626071.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/ice_diag.d
+Fri Jan 30 13:27:16 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159626071.gadi-pbs.SC: CICE run completed successfully
+Mon Feb  2 11:05:02 AEDT 2026 ./cice.submit: free-slip job submitted
+Mon Feb  2 14:49:00 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159736931.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/cice.runlog.260202-110528
+Mon Feb  2 14:49:00 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159736931.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/ice_diag.d
+Mon Feb  2 14:49:00 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159736931.gadi-pbs.SC: CICE run completed successfully
+Thu Feb  5 17:00:50 AEDT 2026 ./cice.build:free-slip04 build completed cice.bldlog.260205-170021
+Thu Feb  5 17:32:11 AEDT 2026 ./cice.submit: free-slip job submitted
+Thu Feb  5 17:40:53 AEDT 2026 ./cice.build:free-slip05 build completed cice.bldlog.260205-173912
+Thu Feb  5 17:41:54 AEDT 2026 ./cice.submit: free-slip job submitted
+Fri Feb  6 01:01:10 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159905314.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip05/logs/cice.runlog.260205-174240
+Fri Feb  6 01:01:10 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159905314.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip05/logs/ice_diag.d
+Fri Feb  6 01:01:10 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159905314.gadi-pbs.SC: CICE run completed successfully

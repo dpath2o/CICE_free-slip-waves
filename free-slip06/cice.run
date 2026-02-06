@@ -1,0 +1,84 @@
+#!/bin/csh -f
+#PBS -N free-slip06
+#PBS -P gv90
+#PBS -q normalbw
+#PBS -l walltime=10:00:00
+#PBS -l ncpus=1232
+#PBS -l mem=700GB
+#PBS -l storage=gdata/gv90+gdata/xp65
+#PBS -l wd
+#PBS -j oe
+#PBS -W umask=022
+
+# Initialize module system
+source /opt/Modules/v4.3.0/init/csh
+module purge
+module load intel-compiler-llvm/2024.2.1
+module load openmpi/4.1.7
+module load netcdf/4.9.2
+
+#--------------------------------------------
+source /etc/profile.d/modules.csh
+cd /home/581/da1339/AFIM/src/CICE_free-slip/free-slip06
+source ./cice.settings || exit 2
+source ./env.${ICE_MACHCOMP} || exit 2
+
+echo " "
+echo "${0}:"
+set stamp = `date '+%y%m%d-%H%M%S'`
+set ICE_RUNLOG_FILE = "cice.runlog.${stamp}"
+
+#--------------------------------------------
+./setup_run_dirs.csh
+#--------------------------------------------
+cd ${ICE_RUNDIR}
+
+setenv OMP_NUM_THREADS ${ICE_NTHRDS}
+setenv OMP_SCHEDULE "${ICE_OMPSCHED}"
+cp -f ${ICE_CASEDIR}/ice_in ${ICE_RUNDIR}
+cp -f ${ICE_CASEDIR}/env.gadi1_intel ${ICE_RUNDIR}
+cp -f ${ICE_CASEDIR}/cice.settings ${ICE_RUNDIR}
+set diagtype = `grep -i diag_type ${ICE_CASEDIR}/ice_in | grep -i stdout | wc -l`
+set diagfile = `grep -i diag_file ${ICE_CASEDIR}/ice_in | sed -e "s/.* = '\(.*\)'/\1/"`
+echo " "
+echo "CICE case directory is ${ICE_CASEDIR}"
+echo "CICE rundir is ${ICE_RUNDIR}"
+echo "CICE log file is ${ICE_RUNLOG_FILE}"
+echo "CICE run started : `date`"
+mpirun -np 1232 ./cice >&! $ICE_RUNLOG_FILE
+echo "CICE run finished: `date`"
+echo " "
+
+#--------------------------------------------
+if !(-d ${ICE_LOGDIR}) mkdir -p ${ICE_LOGDIR}
+
+set checkfile = ${ICE_RUNLOG_FILE}
+cp -p ${ICE_RUNLOG_FILE} ${ICE_LOGDIR}
+echo "CICE output file is ${ICE_LOGDIR}/${ICE_RUNLOG_FILE}"
+echo "`date` ${0}: CICE output file is ${ICE_LOGDIR}/${ICE_RUNLOG_FILE}" >> ${ICE_CASEDIR}/README.case
+
+if ( ${diagtype} == 0) then
+  set checkfile = ${diagfile}
+  cp -p ${diagfile} ${ICE_LOGDIR}
+  echo "CICE output file is ${ICE_LOGDIR}/${diagfile}"
+  echo "`date` ${0}: CICE output file is ${ICE_LOGDIR}/${diagfile}" >> ${ICE_CASEDIR}/README.case
+endif
+
+grep ' CICE COMPLETED SUCCESSFULLY' ${checkfile}
+if ( $status == 0 ) then
+  echo "CICE run completed successfully"
+  echo "`date` ${0}: CICE run completed successfully" >> ${ICE_CASEDIR}/README.case
+else
+  grep 'COMPLETED SUCCESSFULLY' ${checkfile}
+  if ( $status == 0 ) then
+    echo "Run completed successfully"
+    echo "`date` ${0}: Run completed successfully" >> ${ICE_CASEDIR}/README.case
+  else
+    echo "Run did NOT complete"
+    echo "`date` ${0}: CICE run did NOT complete" >> ${ICE_CASEDIR}/README.case
+    exit -1
+  endif
+endif
+
+echo "done ${0}"
+
