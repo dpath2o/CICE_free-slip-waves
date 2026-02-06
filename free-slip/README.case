@@ -1,0 +1,3 @@
+Fri Feb  6 16:56:15 AEDT 2026 submit_and_archive: submitted CICE chain start job=160009574.gadi-pbs CASE=free-slip SIM=LD-static-Cs1e-3 (1993-01-01..2023-12-31)
+Waiting for DONE flag: /home/581/da1339/AFIM_archive/LD-static-Cs1e-3/cice_chain_DONE_1993-01-01_2023-12-31.flag
+Crash flag is:          /home/581/da1339/AFIM_archive/LD-static-Cs1e-3/cice_chain_CRASH_1993-01-01_2023-12-31.flag
