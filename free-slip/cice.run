@@ -11,6 +11,13 @@
 #PBS -W umask=022
 set -euo pipefail
 
+# Initialize module system
+source /opt/Modules/v4.3.0/init/bash
+module purge
+module load intel-compiler-llvm/2024.2.1
+module load openmpi/4.1.7
+module load netcdf/4.9.2
+
 # ---------------------------
 # Required inputs via qsub -v
 # ---------------------------
@@ -92,16 +99,16 @@ fi
 # -------------------------
 cd "$ICE_RUNDIR"
 log "Launching CICE…"
-mpiexec -n 1232 ./cice >& cice.runlog.${PBS_JOBID}
+mpirun -np 1232 ./cice >& cice.runlog.${PBS_JOBID}
 
 # Success test
-if ! grep -q "SUCCESSFUL TERMINATION" "cice.runlog.${PBS_JOBID}"; then
+if ! grep -q "CICE COMPLETED SUCCESSFULLY" "ice_diag.d"; then
   log "CRASH: SUCCESSFUL TERMINATION not found in cice.runlog.${PBS_JOBID}"
   touch "$CRASH_FLAG"
   exit 1
 fi
 
-log "Chunk finished OK."
+log "CICE finished OK."
 
 # ------------------------------------------------------------
 # Identify newest restart file and update ice.restart_file
@@ -132,7 +139,7 @@ else
   log "No iceh.* files to archive this chunk."
 fi
 
-cp -p "cice.runlog.${PBS_JOBID}" "$ARCHROOT"/ 2>/dev/null || true
+cp -p "cice.runlog.*" "$ARCHROOT"/ 2>/dev/null || true
 cp -p "ice_diag.d" "$ARCHROOT"/ice_diag.d.latest 2>/dev/null || true
 cp -p "$RESTART_DIR/$last_restart_base" "$ARCHROOT"/ 2>/dev/null || true
 
@@ -158,9 +165,9 @@ if [[ "$last_date" < "$target_date" ]]; then
     "${PBS_O_WORKDIR:-$ICE_RUNDIR}/cice.run")"
   log "Submitted NEXT job: $next_jobid"
 else
-  log "FINISHED -> writing DONE flag $DONE_FLAG"
+  log "cice.run for $CASE_NAME is now COMPLETE -> writing DONE flag $DONE_FLAG"
   echo "$(date '+%F %T') DONE last_restart=$last_restart_base" > "$DONE_FLAG"
 fi
 
-log "END chunk."
+log "TERMINATING cice.run"
 
