@@ -605,3 +605,7 @@ Thu Feb  5 17:32:11 AEDT 2026 ./cice.submit: free-slip job submitted
 Fri Feb  6 01:01:11 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159904168.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/cice.runlog.260205-173317
 Fri Feb  6 01:01:11 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159904168.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/ice_diag.d
 Fri Feb  6 01:01:11 AEDT 2026 /local/spool/pbs/mom_priv/jobs/159904168.gadi-pbs.SC: CICE run completed successfully
+Thu Mar 26 22:37:08 AEDT 2026 ./cice.submit: free-slip job submitted
+Fri Mar 27 07:47:24 AEDT 2026 /local/spool/pbs/mom_priv/jobs/163996015.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/cice.runlog.260326-223953
+Fri Mar 27 07:47:24 AEDT 2026 /local/spool/pbs/mom_priv/jobs/163996015.gadi-pbs.SC: CICE output file is /home/581/da1339/AFIM/src/CICE_free-slip/free-slip04/logs/ice_diag.d
+Fri Mar 27 07:47:24 AEDT 2026 /local/spool/pbs/mom_priv/jobs/163996015.gadi-pbs.SC: CICE run completed successfully
