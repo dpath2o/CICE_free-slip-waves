@@ -1,4 +1,0 @@
-#!/bin/csh -f
-
-qsub ./cice.run
-echo "`date` ${0}: free-slip job submitted" >> ${PWD}/README.case

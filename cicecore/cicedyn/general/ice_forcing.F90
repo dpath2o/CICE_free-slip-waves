@@ -4205,73 +4205,243 @@ contains
  end subroutine uniform_data_ocn
 
  !=======================================================================
- subroutine get_wave_spec
-   
-   use ice_read_write, only: ice_read_nc_xyf
-   use ice_arrays_column, only: wave_spectrum, &
-        dwavefreq, wavefreq
-   use ice_constants, only: c0
-   use ice_domain_size, only: nfreq
-   use ice_timers, only: ice_timer_start, ice_timer_stop, timer_fsd
+ ! expecting files as:
+ !     wave_spec_file = './CAWCR_efreq_for_CICE6_YYYYMM.nc'
+   subroutine increment_year_month(yr_in, mon_in, yr_out, mon_out)
+     integer(kind=int_kind), intent(in)  :: yr_in, mon_in
+     integer(kind=int_kind), intent(out) :: yr_out, mon_out
+     yr_out  = yr_in
+     mon_out = mon_in + 1
+     if (mon_out > 12) then
+        mon_out = 1
+        yr_out  = yr_in + 1
+     endif
+   end subroutine increment_year_month
 
-   ! local variables
-   integer (kind=int_kind) :: &
-        fid                    ! file id for netCDF routines
+   subroutine wave_spec_files(yr, mon)
+     integer(kind=int_kind), intent(in) :: yr, mon
+     character(len=6) :: yyyymm
+     integer(kind=int_kind) :: ipos
+     character(len=*), parameter :: subname = '(wave_spec_files)'
+     if (len_trim(wave_file_template) == 0) then
+        wave_file_template = trim(wave_spec_file)
+     endif
+     write(yyyymm,'(i4.4,i2.2)') yr, mon
+     F_WAVE = trim(wave_file_template)
+     ipos = index(F_WAVE, 'YYYYMM')
+     if (ipos > 0) then
+        F_WAVE = trim(F_WAVE(1:ipos-1)) // yyyymm // trim(F_WAVE(ipos+6:))
+     else
+        call abort_ice(error_message=subname//' wave_spec_file must contain YYYYMM placeholder', &
+             file=__FILE__, line=__LINE__)
+     endif
+   end subroutine wave_spec_files
 
-   real(kind=dbl_kind), dimension(nfreq) :: &
-        wave_spectrum_profile  ! wave spectrum
+   subroutine get_wave_spec
 
-   character(char_len) :: wave_spec_type
-   logical (kind=log_kind) :: wave_spec
-   character(len=*), parameter :: subname = '(get_wave_spec)'
+    use ice_read_write   , only: ice_read_nc_xyf
+    use ice_arrays_column, only: wave_spectrum, dwavefreq, wavefreq
+    use ice_domain       , only: nblocks
+    use ice_constants    , only: c0, c1, c3600
+    use ice_calendar     , only: myear, mmonth, mday, msec, daymo
+    use ice_timers       , only: ice_timer_start, ice_timer_stop, timer_fsd
 
-   if (local_debug .and. my_task == master_task) write(nu_diag,*) subname,'fdbg start'
+    integer (kind=int_kind) :: fid
+    integer (kind=int_kind) :: recnum, recnum2
+    integer (kind=int_kind) :: yr2, mon2
+    integer (kind=int_kind) :: maxrec
 
-   call ice_timer_start(timer_fsd)
+    real (kind=dbl_kind) :: sec1hr, tt, eps
 
-   call icepack_query_parameters(wave_spec_out=wave_spec, &
-        wave_spec_type_out=wave_spec_type)
-   call icepack_warnings_flush(nu_diag)
-   if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
-        file=__FILE__, line=__LINE__)
+    real (kind=dbl_kind), dimension(nfreq) :: wave_spectrum_profile
 
-   ! if no wave data is provided, wave_spectrum is zero everywhere
-   wave_spectrum(:,:,:,:) = c0
-   wave_spec_dir = ocn_data_dir
-   debug_forcing = .false.
+    character(char_len) :: wave_spec_type
+    logical (kind=log_kind) :: wave_spec
 
-   ! wave spectrum and frequencies
-   if (wave_spec) then
-      ! get hardwired frequency bin info and a dummy wave spectrum profile
-      ! the latter is used if wave_spec_type == profile
-      call icepack_init_wave(nfreq,                 &
-           wave_spectrum_profile, &
-           wavefreq, dwavefreq)
+    character(len=*), parameter :: subname = '(get_wave_spec)'
 
-      ! read more realistic data from a file
-      if ((trim(wave_spec_type) == 'constant').OR.(trim(wave_spec_type) == 'random')) then
-         if (trim(wave_spec_file(1:4)) == 'unkn') then
-            call abort_ice (subname//'ERROR: wave_spec_file '//trim(wave_spec_file), &
-                 file=__FILE__, line=__LINE__)
-         else
+    if (local_debug .and. my_task == master_task) write(nu_diag,*) subname,' fdbg start'
+
+    call ice_timer_start(timer_fsd)
+
+    call icepack_query_parameters(wave_spec_out=wave_spec, &
+         wave_spec_type_out=wave_spec_type)
+    call icepack_warnings_flush(nu_diag)
+    if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
+         file=__FILE__, line=__LINE__)
+
+    wave_spectrum(:,:,:,:) = c0
+
+    if (.not. wave_spec) then
+       call ice_timer_stop(timer_fsd)
+       return
+    endif
+
+    !-------------------------------------------------------------
+    ! Initialize frequency axis once
+    !-------------------------------------------------------------
+    if (.not. wave_init_done) then
+       call icepack_init_wave(nfreq, wave_spectrum_profile, wavefreq, dwavefreq)
+       wave_init_done = .true.
+       wave_file_template = trim(wave_spec_file)
+    endif
+
+    !-------------------------------------------------------------
+    ! Optional fixed-profile mode
+    !-------------------------------------------------------------
+    if (trim(wave_spec_type) == 'profile') then
+       integer(kind=int_kind) :: iblk, k
+       do iblk = 1, max_blocks
+          do k = 1, nfreq
+             wave_spectrum(:,:,k,iblk) = wave_spectrum_profile(k)
+          enddo
+       enddo
+       call ice_timer_stop(timer_fsd)
+       return
+    endif
+
+    !-------------------------------------------------------------
+    ! Time-varying spectrum from monthly hourly files
+    !-------------------------------------------------------------
+    sec1hr = c3600
+    maxrec = daymo(mmonth) * 24
+
+    ! record number within the current monthly file
+    recnum = 24*(mday-1) + 1 + int(real(msec,kind=dbl_kind)/sec1hr)
+
+    if (recnum < 1) recnum = 1
+    if (recnum > maxrec) recnum = maxrec
+
+    call wave_spec_files(myear, mmonth)
+
+    if (debug_forcing .or. local_debug) then
+       if (my_task == master_task) then
+          write(nu_diag,*) subname, ' wave file  : ', trim(F_WAVE)
+          write(nu_diag,*) subname, ' year/month : ', myear, mmonth
+          write(nu_diag,*) subname, ' mday,msec  : ', mday, msec
+          write(nu_diag,*) subname, ' recnum     : ', recnum, ' / ', maxrec
+       endif
+    endif
+
 #ifdef USE_NETCDF
-            call ice_open_nc(wave_spec_file,fid)
-            call ice_read_nc_xyf (fid, 1, 'efreq', wave_spectrum(:,:,:,:), debug_forcing, &
-                 field_loc_center, field_type_scalar)
-            call ice_close_nc(fid)
+    ! current record
+    call ice_open_nc(F_WAVE, fid)
+    call ice_read_nc_xyf(fid, recnum, 'efreq', wave_data(:,:,:,1:1,:), debug_forcing, &
+         field_loc_center, field_type_scalar)
+    call ice_close_nc(fid)
+
+    ! next record (same month or next month)
+    if (recnum < maxrec) then
+       recnum2 = recnum + 1
+       call ice_open_nc(F_WAVE, fid)
+       call ice_read_nc_xyf(fid, recnum2, 'efreq', wave_data(:,:,:,2:2,:), debug_forcing, &
+            field_loc_center, field_type_scalar)
+       call ice_close_nc(fid)
+    else
+       call increment_year_month(myear, mmonth, yr2, mon2)
+       call wave_spec_files(yr2, mon2)
+       call ice_open_nc(F_WAVE, fid)
+       call ice_read_nc_xyf(fid, 1, 'efreq', wave_data(:,:,:,2:2,:), debug_forcing, &
+            field_loc_center, field_type_scalar)
+       call ice_close_nc(fid)
+    endif
 #else
-            write (nu_diag,*) "wave spectrum file not available, requires cpp USE_NETCDF"
-            write (nu_diag,*) "wave spectrum file not available, using default profile"
-            call abort_ice (subname//'ERROR: wave_spec_file '//trim(wave_spec_file), &
-                 file=__FILE__, line=__LINE__)
+    call abort_ice(error_message=subname//' wave forcing requires USE_NETCDF', &
+         file=__FILE__, line=__LINE__)
 #endif
-         endif
-      endif
-   endif
 
-   call ice_timer_stop(timer_fsd)
+    !-------------------------------------------------------------
+    ! Linear interpolation in time, exactly like ERA5_data
+    !-------------------------------------------------------------
+    eps = 1.0e-6_dbl_kind
+    tt = real(mod(msec, nint(sec1hr)), kind=dbl_kind)
 
- end subroutine get_wave_spec
+    c2intp = tt / sec1hr
+    if (c2intp < c0 .and. c2intp > c0-eps) c2intp = c0
+    if (c2intp > c1 .and. c2intp < c1+eps) c2intp = c1
+    c1intp = c1 - c2intp
+
+    if (c2intp < c0 .or. c2intp > c1) then
+       write(nu_diag,*) subname, ' ERROR: c2intp = ', c2intp
+       call abort_ice(error_message=subname//' c2intp out of range', &
+            file=__FILE__, line=__LINE__)
+    endif
+
+    wave_spectrum(:,:,:,:) = c1intp * wave_data(:,:,:,1,:) + &
+                             c2intp * wave_data(:,:,:,2,:)
+
+    where (wave_spectrum < c0) wave_spectrum = c0
+
+    call ice_timer_stop(timer_fsd)
+
+  end subroutine get_wave_spec
+!  subroutine get_wave_spec
+   
+!    use ice_read_write, only: ice_read_nc_xyf
+!    use ice_arrays_column, only: wave_spectrum, &
+!         dwavefreq, wavefreq
+!    use ice_constants, only: c0
+!    use ice_domain_size, only: nfreq
+!    use ice_timers, only: ice_timer_start, ice_timer_stop, timer_fsd
+
+!    ! local variables
+!    integer (kind=int_kind) :: &
+!         fid                    ! file id for netCDF routines
+
+!    real(kind=dbl_kind), dimension(nfreq) :: &
+!         wave_spectrum_profile  ! wave spectrum
+
+!    character(char_len) :: wave_spec_type
+!    logical (kind=log_kind) :: wave_spec
+!    character(len=*), parameter :: subname = '(get_wave_spec)'
+
+!    if (local_debug .and. my_task == master_task) write(nu_diag,*) subname,'fdbg start'
+
+!    call ice_timer_start(timer_fsd)
+
+!    call icepack_query_parameters(wave_spec_out=wave_spec, &
+!         wave_spec_type_out=wave_spec_type)
+!    call icepack_warnings_flush(nu_diag)
+!    if (icepack_warnings_aborted()) call abort_ice(error_message=subname, &
+!         file=__FILE__, line=__LINE__)
+
+!    ! if no wave data is provided, wave_spectrum is zero everywhere
+!    wave_spectrum(:,:,:,:) = c0
+!    wave_spec_dir = ocn_data_dir
+!    debug_forcing = .false.
+
+!    ! wave spectrum and frequencies
+!    if (wave_spec) then
+!       ! get hardwired frequency bin info and a dummy wave spectrum profile
+!       ! the latter is used if wave_spec_type == profile
+!       call icepack_init_wave(nfreq,                 &
+!            wave_spectrum_profile, &
+!            wavefreq, dwavefreq)
+
+!       ! read more realistic data from a file
+!       if ((trim(wave_spec_type) == 'constant').OR.(trim(wave_spec_type) == 'random')) then
+!          if (trim(wave_spec_file(1:4)) == 'unkn') then
+!             call abort_ice (subname//'ERROR: wave_spec_file '//trim(wave_spec_file), &
+!                  file=__FILE__, line=__LINE__)
+!          else
+! #ifdef USE_NETCDF
+!             call ice_open_nc(wave_spec_file,fid)
+!             call ice_read_nc_xyf (fid, 1, 'efreq', wave_spectrum(:,:,:,:), debug_forcing, &
+!                  field_loc_center, field_type_scalar)
+!             call ice_close_nc(fid)
+! #else
+!             write (nu_diag,*) "wave spectrum file not available, requires cpp USE_NETCDF"
+!             write (nu_diag,*) "wave spectrum file not available, using default profile"
+!             call abort_ice (subname//'ERROR: wave_spec_file '//trim(wave_spec_file), &
+!                  file=__FILE__, line=__LINE__)
+! #endif
+!          endif
+!       endif
+!    endif
+
+!    call ice_timer_stop(timer_fsd)
+
+!  end subroutine get_wave_spec
 
  !=======================================================================
  subroutine init_snowtable
