@@ -8,12 +8,12 @@
     istep0               = 0
     dt                   = 1800.0
     npt_unit             = 'm'
-    npt                  = 12
+    npt                  = 1
     ndtd                 = 1
-    runtype              = 'continue'
+    runtype              = 'initial'
     ice_ic               = 'none'
     restart_ext          = .false.
-    use_restart_time     = .true.
+    use_restart_time     = .false.
     restart_format       = 'default'
     restart_rearranger   = 'default'
     restart_iotasks      = -99
@@ -41,7 +41,7 @@
     debug_model_j        = -1
     debug_model_iblk     = -1
     debug_model_task     = -1
-    debug_forcing        = .false.
+    debug_forcing        = .true.
     print_global         = .false.
     print_points         = .false.
     timer_stats          = .false.
@@ -103,7 +103,7 @@
     dyscale           = 1.d0
     close_boundaries  = .true.
     ncat              = 5
-    nfsd              = 1
+    nfsd              = 12
     nilyr             = 4
     nslyr             = 1
     nblyr             = 1
@@ -137,7 +137,7 @@
     restart_iso  = .false.
     tr_aero      = .false.
     restart_aero = .false.
-    tr_fsd       = .false.
+    tr_fsd       = .true.
     restart_fsd  = .false.
 /
 
@@ -295,9 +295,9 @@
     saltflux_option = 'constant'
     ice_ref_salinity = 4.0
     oceanmixed_ice  = .true.
-    wave_spec_type  = 'none'
-    wave_spec_file  = 'unknown_wave_spec_file'
-    nfreq           = 25
+    wave_spec_type  = 'constant'
+    wave_spec_file  = '/g/data/gv90/da1339/afim_input/CAWCR/CAWCR_efreq_for_CICE6_YYYYMM.nc'    
+    nfreq           = 29
     restart_coszen  = .false.
     restore_ice     = .false.
     restore_ocn     = .true.
@@ -776,8 +776,8 @@
     f_dafsd_latm   = 'x'
     f_dafsd_wave   = 'x'
     f_dafsd_weld   = 'x'
-    f_wave_sig_ht  = 'x'
-    f_aice_ww      = 'x'
-    f_diam_ww      = 'x'
-    f_hice_ww      = 'x'
+    f_wave_sig_ht  = 'd'
+    f_aice_ww      = 'd'
+    f_diam_ww      = 'd'
+    f_hice_ww      = 'd'
 /

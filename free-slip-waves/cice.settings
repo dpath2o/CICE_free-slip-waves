@@ -5,8 +5,8 @@ setenv ICE_SANDBOX  /home/581/da1339/AFIM/src/CICE_free-slip-waves
 setenv ICE_MACHINE  gadi1  
 setenv ICE_ENVNAME  intel  
 setenv ICE_MACHCOMP  gadi1_intel  
-setenv ICE_SCRIPTS  /home/581/da1339/AFIM/src/CICE_free-slip/configuration/scripts  
-setenv ICE_CASEDIR  /home/581/da1339/AFIM/src/CICE_free-slip/free-slip-waves
+setenv ICE_SCRIPTS  /home/581/da1339/AFIM/src/CICE_free-slip-waves/configuration/scripts  
+setenv ICE_CASEDIR  /home/581/da1339/AFIM/src/CICE_free-slip-waves/free-slip-waves
 setenv ICE_RUNDIR  /g/data/gv90/da1339/cice-dirs/runs/free-slip-waves
 setenv ICE_OBJDIR     ${ICE_RUNDIR}/compile
 setenv ICE_RSTDIR     ${ICE_RUNDIR}/restart
